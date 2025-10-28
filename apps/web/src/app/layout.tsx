@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Providers } from "../providers";
-import { getSelectedTapestryId, SELECTED_TAPESTRY_EVENT, api, attachTokenIfSignedIn } from "../lib/api";
+import { getSelectedTapestryId, SELECTED_TAPESTRY_EVENT, api, attachTokenIfSignedIn, ensureSignedIn } from "../lib/api";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import "../styles/legacy.css";
