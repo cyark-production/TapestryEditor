@@ -1,0 +1,45 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Build outputs
+**/dist/
+apps/web/.next/
+apps/web/out/
+.next/
+out/
+**/.tsbuildinfo
+
+# Caches
+**/.cache/
+**/.turbo/
+**/.eslintcache
+
+# Coverage
+coverage/
+**/.nyc_output/
+
+# Env & secrets
+.env
+.env.*
+!*.example
+apps/api/dev.env
+apps/api/ga-key.json
+apps/api/*-key.json
+
+# Local DB dump
+tapestrydb.sql
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Hosting (optional)
+.vercel/
+.netlify/
+

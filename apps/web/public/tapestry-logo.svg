@@ -1,0 +1,21 @@
+<svg width="1000" height="200" viewBox="0 0 1000 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo icon -->
+  <g transform="translate(0, 0)">
+    <!-- Orange stripe -->
+    <path d="M0 20 L140 20 L120 60 L0 60 Z" fill="#FF9049"/>
+    <!-- Coral stripe -->
+    <path d="M0 70 L140 70 L120 110 L0 110 Z" fill="#FF5C5C"/>
+    <!-- Pink stripe -->
+    <path d="M0 120 L140 120 L120 160 L0 160 Z" fill="#FF2D79"/>
+    <!-- White triangle -->
+    <path d="M0 20 L0 160 L60 90 Z" fill="white"/>
+  </g>
+  
+  <!-- TAPESTRY text -->
+  <text x="180" y="125" font-family="Arial, sans-serif" font-weight="bold" font-size="80" fill="#3d3d3d">TAPESTRY</text>
+</svg>
+
+
+
+
+

@@ -1,0 +1,28 @@
+{
+  "name": "tapestry-editor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prebuild": "npm run -w @tapestry/db generate",
+    "build": "npm run -w @tapestry/db build && npm run -w @tapestry/api build && npm run -w @tapestry/web build",
+    "dev": "npm run -w @tapestry/api dev",
+    "format": "prettier -w .",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "@typescript-eslint/parser": "^8.8.1",
+    "eslint": "9.11.1",
+    "globals": "^16.4.0",
+    "prettier": "3.3.3",
+    "typescript": "5.6.3"
+  }
+}

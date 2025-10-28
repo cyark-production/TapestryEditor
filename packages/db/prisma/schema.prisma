@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// Minimal subset to start CRUD; mapped to legacy names
+model Tapestry {
+  id               Int      @id @default(autoincrement()) @map("tapestry_id")
+  prettyId         String?  @db.Char(255)                 @map("tapestry_pretty_id")
+  title            String?  @db.Char(255)                 @map("tapestry_title")
+  titleAltLang     String?  @db.Char(255)                 @map("tapestry_title_alt_lang")
+  location         String?  @db.Char(255)                 @map("tapestry_location")
+  locationAltLang  String?  @db.Char(255)                 @map("tapestry_location_alt_lang")
+  tagline          String?  @db.Char(255)                 @map("tapestry_tagline")
+  taglineAltLang   String?  @db.Char(255)                 @map("tapestry_tagline_alt_lang")
+  headline         String?  @db.VarChar(100)              @map("tapestry_headline")
+  cardImage        String?  @db.Char(255)                 @map("tapestry_card_image")
+  hoverVideo       String?  @db.Char(255)                 @map("tapestry_hover_video")
+  snippet          String?  @db.VarChar(350)              @map("tapestry_snippet")
+  publicationYear  String?  @db.Char(4)                   @map("tapestry_publication_year")
+  duration         Int?                                     @map("tapestry_duration")
+  latitude         Decimal?                                 @map("tapestry_latitude") @db.Decimal(20, 6)
+  longitude        Decimal?                                 @map("tapestry_longitude") @db.Decimal(20, 6)
+  mapZoom          Int?                                     @map("tapestry_map_zoom")
+  launchDate       DateTime?                                @map("launch_date") @db.Date
+  azurePath        String?  @db.Char(255)                  @map("azure_path")
+  sketchfabModelId String?  @db.Char(255)                  @map("sketchfab_model_id")
+  surveymonkey     String?  @db.Char(255)                  @map("surveymonkey")
+  audioLanguage1   String?  @db.Char(255)                 @map("audio_language_1")
+  audioLanguage2   String?  @db.Char(255)                 @map("audio_language_2")
+  ambientAudio     String?  @db.Char(255)                 @map("ambient_audio")
+  ambientAudioCc1  String?  @db.Char(255)                 @map("ambient_audio_cc_1")
+  ambientAudioCc1Alt String? @db.Char(255)                @map("ambient_audio_cc_1_alt")
+  ambientAudioAlt  String?  @db.Char(255)                 @map("ambient_audio_alt")
+  ambientAudioCc2  String?  @db.Char(255)                 @map("ambient_audio_cc_2")
+  ambientAudioCc2Alt String? @db.Char(255)                @map("ambient_audio_cc_2_alt")
+  resourcesId      Int?                                     @map("resources_id")
+  overviewId       Int?                                     @map("overview_id")
+  callToActionId   Int?                                     @map("call_to_action_id")
+  published        Int?                                     @map("published")
+  displayWeight    Int?                                     @map("display_weight")
+  communityMade    Int?                                     @map("community_made")
+  theme            Int?                                     @map("theme")
+
+  scenes           Scene[]
+  voices           Voice[]
+
+  @@map("tapestry")
+}
+
+model Scene {
+  id                 Int      @id @default(autoincrement()) @map("scene_id")
+  sequence           String?  @db.Char(255)                 @map("scene_sequence")
+  title              String?  @db.Char(255)                 @map("scene_title")
+  titleAltLang       String?  @db.Char(255)                 @map("scene_title_alt_lang")
+  description        String?  @db.VarChar(1000)             @map("scene_desciption")
+  descriptionAltLang String?  @db.VarChar(1000)             @map("scene_desciption_alt_lang")
+  audioNarration1    String?  @db.Char(255)                 @map("audio_narration_1")
+  audioNarration2    String?  @db.Char(255)                 @map("audio_narration_2")
+  narrationCc1       String?  @db.Char(255)                 @map("narration_cc_1")
+  narrationCc2       String?  @db.Char(255)                 @map("narration_cc_2")
+  tapestryId         Int?                                    @map("tapestry_id")
+
+  tapestry           Tapestry? @relation(fields: [tapestryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voiceClips         VoiceClip[]
+  mediaItems         MediaItem[]
+
+  @@index([tapestryId])
+  @@map("scenes")
+}
+
+model Voice {
+  id                       Int      @id @default(autoincrement()) @map("voice_id")
+  name                     String?  @db.Char(255)                 @map("voice_name")
+  nameAltLang              String?  @db.Char(255)                 @map("voice_name_alt_lang")
+  title                    String?  @db.Char(255)                 @map("voice_title")
+  titleAltLang             String?  @db.Char(255)                 @map("voice_title_alt_lang")
+  affiliationAltLang       String?  @db.Char(255)                 @map("voice_affiliation_alt_lang")
+  affiliation              String?  @db.Char(255)                 @map("voice_affiliation")
+  bio                      String?  @db.VarChar(1000)             @map("voice_bio")
+  bioAltLang               String?  @db.VarChar(1000)             @map("voice_bio_alt_lang")
+  introVideo               String?  @db.VarChar(1000)             @map("voice_intro_video")
+  introVideoCc1            String?  @db.Char(255)                 @map("voice_intro_video_cc_1")
+  introVideoCc2            String?  @db.Char(255)                 @map("voice_intro_video_cc_2")
+  headshot                 String?  @db.Char(255)                 @map("voice_headshot")
+  headshotAltDesc          String?  @db.Char(255)                 @map("voice_headshot_alt_desc")
+  headshotLarge            String?  @db.Char(255)                 @map("voice_headshot_large")
+  headshotLargeAltDesc     String?  @db.Char(255)                 @map("voice_headshot_large_alt_desc")
+  order                    Int?                                     @map("voice_order")
+  tapestryId               Int?                                     @map("tapestry_id")
+
+  tapestry                 Tapestry? @relation(fields: [tapestryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  clips                    VoiceClip[]
+
+  @@map("voices")
+}
+
+model VoiceClip {
+  id                 Int      @id @default(autoincrement()) @map("voice_clip_id")
+  voiceVideo         String?  @db.VarChar(1000)            @map("voice_video")
+  voiceVideoCc1      String?  @db.Char(255)                @map("voice_video_cc_1")
+  voiceVideoCc2      String?  @db.Char(255)                @map("voice_video_cc_2")
+  voiceBubbleText    String?  @db.Char(255)                @map("voice_bubble_text")
+  voiceBubbleTextAlt String?  @db.Char(255)                @map("voice_bubble_text_alt_lang")
+  voiceId            Int?                                     @map("voice_id")
+  sceneId            Int?                                     @map("scene_id")
+
+  voice              Voice?    @relation(fields: [voiceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  scene              Scene?    @relation(fields: [sceneId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("voice_clips")
+}
+
+model MediaItem {
+  id                    Int      @id @default(autoincrement()) @map("media_id")
+  title                 String?  @db.Char(255)                 @map("media_title")
+  titleAltLang          String?  @db.Char(255)                 @map("media_title_alt_lang")
+  caption               String?  @db.VarChar(500)              @map("media_caption")
+  captionAltLang        String?  @db.VarChar(500)              @map("media_caption_alt_lang")
+  type                  String?  @db.Char(255)                 @map("media_type")
+  assetLink             String?  @db.VarChar(1000)             @map("media_asset_link")
+  assetThumbLink        String?  @db.Char(255)                 @map("media_asset_thumb_link")
+  assetSecondaryLink    String?  @db.Char(255)                 @map("media_asset_secondary_link")
+  assetAltDesc          String?  @db.VarChar(1000)             @map("media_asset_alt_desc")
+  assetCc               String?  @db.Char(255)                 @map("media_asset_cc")
+  assetCcAlt            String?  @db.Char(255)                 @map("media_asset_cc_alt")
+  order                 Int?                                     @map("media_order")
+  sceneId               Int?                                     @map("scene_id")
+  credit                String?  @db.VarChar(500)              @map("media_credit")
+  creditAltLang         String?  @db.VarChar(500)              @map("media_credit_alt_lang")
+
+  scene                 Scene?   @relation(fields: [sceneId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([sceneId])
+  @@map("media_items")
+}
+
+
+
