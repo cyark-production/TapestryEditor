@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ensureSignedIn, api } from "../../lib/api";
+import { ensureSignedIn, api } from "../../../lib/api";
 
 type HomeSettings = {
   coverImage: string;
