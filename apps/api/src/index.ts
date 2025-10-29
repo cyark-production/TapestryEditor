@@ -834,6 +834,222 @@ app.delete("/interactives/:interactiveId", authGuard(["Admin", "Editor"]), async
   res.sendStatus(204);
 });
 
+function interactiveHighlightSelect(whereClause: string, orderClause?: string) {
+  return `SELECT ih.interactive_highlight_id             AS id,
+                 ih.highlight_thumbnail                 AS highlightThumbnail,
+                 ih.sketchfab_material_id                AS sketchfabMaterialId,
+                 ih.sketchfab_model_id                   AS sketchfabModelId,
+                 ih.icon_type                            AS iconType,
+                 ih.interactive_type                     AS interactiveType,
+                 ih.popup_title                          AS popupTitle,
+                 ih.popup_title_alt_lang                 AS popupTitleAltLang,
+                 ih.popup_text                           AS popupText,
+                 ih.popup_text_alt_lang                  AS popupTextAltLang,
+                 ih.popup_media_link                     AS popupMediaLink,
+                 ih.popup_media_type                     AS popupMediaType,
+                 ih.popup_media_alt_desc                 AS popupMediaAltDesc,
+                 ih.popup_video_cc_1                     AS popupVideoCc1,
+                 ih.popup_video_cc_2                     AS popupVideoCc2,
+                 ih.popup_audio_link                     AS popupAudioLink,
+                 ih.camera_position                      AS cameraPosition,
+                 ih.camera_target                        AS cameraTarget,
+                 ih.camera_fov                           AS cameraFov,
+                 ih.depth_of_field                       AS depthOfField,
+                 ih.instant_move                         AS instantMove,
+                 ih.interactive_id                       AS interactiveId,
+                 i.intensity                             AS interactiveIntensity,
+                 i.depth_of_field                        AS interactiveDepthOfField,
+                 s.scene_id                              AS sceneId,
+                 s.scene_sequence                        AS sceneSequence,
+                 s.scene_title                           AS sceneTitle
+          FROM interactive_highlights ih
+          JOIN interactives i ON i.interactive_id = ih.interactive_id
+          JOIN scenes s ON s.interactive_id = i.interactive_id
+          ${whereClause}
+          ${orderClause ?? ""}`;
+}
+
+const interactiveHighlightFieldMap: Record<string, string> = {
+  highlightThumbnail: "highlight_thumbnail",
+  sketchfabMaterialId: "sketchfab_material_id",
+  sketchfabModelId: "sketchfab_model_id",
+  iconType: "icon_type",
+  interactiveType: "interactive_type",
+  popupTitle: "popup_title",
+  popupTitleAltLang: "popup_title_alt_lang",
+  popupText: "popup_text",
+  popupTextAltLang: "popup_text_alt_lang",
+  popupMediaLink: "popup_media_link",
+  popupMediaType: "popup_media_type",
+  popupMediaAltDesc: "popup_media_alt_desc",
+  popupVideoCc1: "popup_video_cc_1",
+  popupVideoCc2: "popup_video_cc_2",
+  popupAudioLink: "popup_audio_link",
+  cameraPosition: "camera_position",
+  cameraTarget: "camera_target",
+  cameraFov: "camera_fov",
+  depthOfField: "depth_of_field",
+  instantMove: "instant_move",
+  interactiveId: "interactive_id",
+};
+
+app.get("/tapestries/:id/interactive-highlights", authGuard(["Admin", "Editor", "Viewer"]), async (req, res) => {
+  const tapestryId = Number(req.params.id);
+  const rows = await (db as any).$queryRawUnsafe(
+    interactiveHighlightSelect(`WHERE s.tapestry_id = ${tapestryId}`, "ORDER BY s.scene_id ASC, ih.interactive_highlight_id ASC")
+  );
+  res.json(rows || []);
+});
+
+app.post("/tapestries/:id/interactive-highlights", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const tapestryId = Number(req.params.id);
+  const schema = z.object({
+    interactiveId: z.number().int(),
+    highlightThumbnail: z.string().max(255).optional().nullable(),
+    sketchfabMaterialId: z.string().max(255).optional().nullable(),
+    sketchfabModelId: z.string().max(255).optional().nullable(),
+    iconType: z.number().int().optional().nullable(),
+    interactiveType: z.number().int().optional().nullable(),
+    popupTitle: z.string().max(255).optional().nullable(),
+    popupTitleAltLang: z.string().max(255).optional().nullable(),
+    popupText: z.string().max(2000).optional().nullable(),
+    popupTextAltLang: z.string().max(2000).optional().nullable(),
+    popupMediaLink: z.string().max(255).optional().nullable(),
+    popupMediaType: z.string().max(255).optional().nullable(),
+    popupMediaAltDesc: z.string().max(1000).optional().nullable(),
+    popupVideoCc1: z.string().max(255).optional().nullable(),
+    popupVideoCc2: z.string().max(255).optional().nullable(),
+    popupAudioLink: z.string().max(1000).optional().nullable(),
+    cameraPosition: z.string().max(255).optional().nullable(),
+    cameraTarget: z.string().max(255).optional().nullable(),
+    cameraFov: z.number().optional().nullable(),
+    depthOfField: z.number().optional().nullable(),
+    instantMove: z.boolean().optional().nullable(),
+  }).safeParse(req.body || {});
+  if (!schema.success) return res.status(400).json(schema.error.flatten());
+  const data = schema.data;
+
+  const belongs = await (db as any).$queryRawUnsafe(
+    `SELECT i.interactive_id
+     FROM interactives i
+     JOIN scenes s ON s.interactive_id = i.interactive_id
+     WHERE i.interactive_id = ${Number(data.interactiveId)} AND s.tapestry_id = ${tapestryId}
+     LIMIT 1`
+  );
+  const ok = Array.isArray(belongs) ? belongs[0] : belongs;
+  if (!ok) return res.status(400).json("Interactive does not belong to this tapestry");
+
+  const columns: string[] = ["interactive_id"];
+  const values: any[] = [data.interactiveId];
+
+  for (const [key, column] of Object.entries(interactiveHighlightFieldMap)) {
+    if (key === "interactiveId") continue;
+    const value = (data as any)[key];
+    if (value === undefined) continue;
+    columns.push(column);
+    if (key === "instantMove") {
+      values.push(value == null ? null : value ? 1 : 0);
+    } else {
+      values.push(value);
+    }
+  }
+
+  const placeholders = columns.map(() => "?").join(", ");
+  await (db as any).$executeRawUnsafe(
+    `INSERT INTO interactive_highlights (${columns.join(", ")}) VALUES (${placeholders})`,
+    ...values
+  );
+
+  const inserted = await (db as any).$queryRawUnsafe(`SELECT LAST_INSERT_ID() AS id`);
+  const newId = Array.isArray(inserted) ? inserted[0]?.id : inserted?.id;
+  if (!newId) return res.status(500).json({ error: "Failed to create interactive highlight" });
+  const row = await (db as any).$queryRawUnsafe(
+    interactiveHighlightSelect(`WHERE ih.interactive_highlight_id = ${Number(newId)} LIMIT 1`)
+  );
+  res.status(201).json(Array.isArray(row) ? row[0] : row);
+});
+
+app.put("/interactive-highlights/:id", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const highlightId = Number(req.params.id);
+  const schema = z.object({
+    interactiveId: z.number().int().optional().nullable(),
+    highlightThumbnail: z.string().max(255).optional().nullable(),
+    sketchfabMaterialId: z.string().max(255).optional().nullable(),
+    sketchfabModelId: z.string().max(255).optional().nullable(),
+    iconType: z.number().int().optional().nullable(),
+    interactiveType: z.number().int().optional().nullable(),
+    popupTitle: z.string().max(255).optional().nullable(),
+    popupTitleAltLang: z.string().max(255).optional().nullable(),
+    popupText: z.string().max(2000).optional().nullable(),
+    popupTextAltLang: z.string().max(2000).optional().nullable(),
+    popupMediaLink: z.string().max(255).optional().nullable(),
+    popupMediaType: z.string().max(255).optional().nullable(),
+    popupMediaAltDesc: z.string().max(1000).optional().nullable(),
+    popupVideoCc1: z.string().max(255).optional().nullable(),
+    popupVideoCc2: z.string().max(255).optional().nullable(),
+    popupAudioLink: z.string().max(1000).optional().nullable(),
+    cameraPosition: z.string().max(255).optional().nullable(),
+    cameraTarget: z.string().max(255).optional().nullable(),
+    cameraFov: z.number().optional().nullable(),
+    depthOfField: z.number().optional().nullable(),
+    instantMove: z.boolean().optional().nullable(),
+  }).partial().safeParse(req.body || {});
+  if (!schema.success) return res.status(400).json(schema.error.flatten());
+  const entries = Object.entries(schema.data);
+  if (!entries.length) return res.json({ ok: true });
+
+  const interactiveEntry = entries.find(([k, v]) => k === "interactiveId" && v != null);
+  if (interactiveEntry) {
+    const desiredId = Number(interactiveEntry[1]);
+    const context = await (db as any).$queryRawUnsafe(
+      `SELECT s.tapestry_id AS tapestryId
+       FROM interactive_highlights ih
+       JOIN interactives i ON i.interactive_id = ih.interactive_id
+       JOIN scenes s ON s.interactive_id = i.interactive_id
+       WHERE ih.interactive_highlight_id = ${highlightId}
+       LIMIT 1`
+    );
+    const current = Array.isArray(context) ? context[0]?.tapestryId : context?.tapestryId;
+    if (!current) return res.status(404).json({ error: "Interactive highlight not found" });
+    const allowed = await (db as any).$queryRawUnsafe(
+      `SELECT s.tapestry_id AS tapestryId
+       FROM interactives i
+       JOIN scenes s ON s.interactive_id = i.interactive_id
+       WHERE i.interactive_id = ${desiredId}
+       LIMIT 1`
+    );
+    const target = Array.isArray(allowed) ? allowed[0]?.tapestryId : allowed?.tapestryId;
+    if (target !== current) return res.status(400).json({ error: "Interactive does not belong to the same tapestry" });
+  }
+
+  const sets: string[] = [];
+  const values: any[] = [];
+  for (const [key, value] of entries) {
+    const column = interactiveHighlightFieldMap[key];
+    if (!column) continue;
+    sets.push(`${column} = ?`);
+    if (key === "instantMove") {
+      values.push(value == null ? null : value ? 1 : 0);
+    } else {
+      values.push(value);
+    }
+  }
+  await (db as any).$executeRawUnsafe(
+    `UPDATE interactive_highlights SET ${sets.join(", ")} WHERE interactive_highlight_id = ${highlightId}`,
+    ...values
+  );
+  const row = await (db as any).$queryRawUnsafe(
+    interactiveHighlightSelect(`WHERE ih.interactive_highlight_id = ${highlightId} LIMIT 1`)
+  );
+  res.json(Array.isArray(row) ? row[0] : row);
+});
+
+app.delete("/interactive-highlights/:id", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const highlightId = Number(req.params.id);
+  await (db as any).$executeRawUnsafe(`DELETE FROM interactive_highlights WHERE interactive_highlight_id = ${highlightId}`);
+  res.sendStatus(204);
+});
+
 // Publishing read - select explicit fields from tapestry
 app.get("/tapestries/:id/publishing", authGuard(["Admin", "Editor", "Viewer"]), async (req, res) => {
   const tapestryId = Number(req.params.id);

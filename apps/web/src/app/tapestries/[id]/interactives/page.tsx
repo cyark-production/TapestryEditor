@@ -16,6 +16,7 @@ export default function InteractivesPage() {
   const [form, setForm] = useState<any>({ sceneId: "", intensity: "", depthOfField: "", desaturate: false, instantMove: false });
   const [modal, setModal] = useState<{ id: number; field: 'intensity' | 'depthOfField' | 'desaturate' | 'instantMove'; label: string; value: string } | null>(null);
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
+  const [scenes, setScenes] = useState<any[]>([]);
 
   async function load() {
     if (!id) return;
@@ -23,12 +24,14 @@ export default function InteractivesPage() {
     setError(null);
     try {
       await ensureSignedIn();
-      const [meRes, res] = await Promise.all([
+      const [meRes, res, tapRes] = await Promise.all([
         api.get('/auth/me'),
-        api.get(`/tapestries/${id}/interactives`, { timeout: 15000 } as any)
+        api.get(`/tapestries/${id}/interactives`, { timeout: 15000 } as any),
+        api.get(`/tapestries/${id}`)
       ]);
       setMe(meRes.data || null);
       setItems(Array.isArray(res.data) ? res.data : []);
+      setScenes(Array.isArray(tapRes.data?.scenes) ? tapRes.data.scenes : []);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -44,7 +47,7 @@ export default function InteractivesPage() {
   const canEdit = (me?.roles || []).some((r: string) => r === 'Admin' || r === 'Editor');
 
   const rows = useMemo(() => items.map((i) => (
-    <tr key={i.id}>
+    <tr key={i.id} id={`interactive-${i.id}`}>
       <td className="legacy-td" title={`Scene ID ${i.sceneId ?? ''}`}>{(i as any).sceneSequence || ''}</td>
       <td className="legacy-td col-id">{i.id}</td>
       <td className="legacy-td">
@@ -78,7 +81,9 @@ export default function InteractivesPage() {
       {error && <p style={{ color: 'crimson' }}>{error}</p>}
       {canEdit && (
         <div style={{ marginTop: 12 }}>
-          <button className="legacy-icon-btn" title="Add interactive" onClick={() => { setForm({ sceneId: "", intensity: "", depthOfField: "", desaturate: false, instantMove: false }); setAddOpen(true); }}><AddIcon /></button>
+          <button className="legacy-icon-btn add-btn" onClick={() => { setForm({ sceneId: "", intensity: "", depthOfField: "", desaturate: false, instantMove: false }); setAddOpen(true); }}>
+            <AddIcon /> Add Interactive
+          </button>
         </div>
       )}
       {items.length > 0 ? (
@@ -118,7 +123,14 @@ export default function InteractivesPage() {
             <h3 style={{ marginTop: 0 }}>Add Interactive</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
               <label>Scene</label>
-              <input placeholder="Scene ID" value={form.sceneId} onChange={(e) => setForm({ ...form, sceneId: e.target.value })} />
+              <select value={form.sceneId} onChange={(e) => setForm({ ...form, sceneId: e.target.value })}>
+                <option value="">Select a scene…</option>
+                {scenes.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.sequence || s.id}{s.title ? ` - ${s.title}` : ''}
+                  </option>
+                ))}
+              </select>
               <label>Intensity</label>
               <input value={form.intensity} onChange={(e) => setForm({ ...form, intensity: e.target.value })} />
               <label>Depth of Field</label>
@@ -130,11 +142,11 @@ export default function InteractivesPage() {
             </div>
             <div className="modal-actions">
               <button className="btn" onClick={() => setAddOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={async () => {
+              <button className="btn btn-primary" disabled={!id || !form.sceneId} onClick={async () => {
                 try {
                   await ensureSignedIn();
                   await api.post(`/tapestries/${id}/interactives`, {
-                    sceneId: Number(form.sceneId),
+                    sceneId: form.sceneId ? Number(form.sceneId) : null,
                     intensity: form.intensity ? Number(form.intensity) : null,
                     depthOfField: form.depthOfField ? Number(form.depthOfField) : null,
                     desaturate: !!form.desaturate,

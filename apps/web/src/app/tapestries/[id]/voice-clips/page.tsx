@@ -122,9 +122,13 @@ export default function VoiceClipsPage() {
       <h2>Voice Clips</h2>
       {loading && <p>Loading…</p>}
       {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      <div style={{ marginTop: 12 }}>
-        <button className="legacy-icon-btn" title="Add voice clip" onClick={() => { setAddForm({ sceneId: "", voiceId: "", voiceBubbleText: "", voiceVideo: "", voiceVideoCc1: "", voiceVideoCc2: "" }); setAddOpen(true); }}><AddIcon /></button>
-      </div>
+      {canEdit && (
+        <div style={{ marginTop: 12 }}>
+          <button className="legacy-icon-btn add-btn" onClick={() => { setAddForm({ sceneId: "", voiceId: "", voiceBubbleText: "", voiceVideo: "", voiceVideoCc1: "", voiceVideoCc2: "" }); setAddOpen(true); }}>
+            <AddIcon /> Add Voice Clip
+          </button>
+        </div>
+      )}
       {items.length > 0 ? (
         <div style={{ marginTop: 16 }}>
           <table className="legacy-table">

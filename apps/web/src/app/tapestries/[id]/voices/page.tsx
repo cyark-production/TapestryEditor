@@ -53,7 +53,9 @@ export default function VoicesPage() {
       {error && <p style={{ color: 'crimson' }}>{error}</p>}
       {canEdit && (
         <div style={{ marginTop: 12 }}>
-          <button className="legacy-icon-btn" title="Add voice" onClick={() => { setForm({ name: "", title: "", order: "" }); setAddOpen(true); }}><AddIcon /></button>
+          <button className="legacy-icon-btn add-btn" onClick={() => { setForm({ name: "", title: "", order: "" }); setAddOpen(true); }}>
+            <AddIcon /> Add Voice
+          </button>
         </div>
       )}
       {items.length > 0 ? (

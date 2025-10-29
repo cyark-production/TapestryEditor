@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, ensureSignedIn } from "../../../../lib/api";
 import { EditIcon, TrashIcon, AddIcon } from "../../../../components/icons";
+import { FileLink } from "../../../../components/FileLink";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 
 export default function SetsPage() {
@@ -85,9 +86,19 @@ export default function SetsPage() {
                     <span>{s.type || '—'}</span>
                     {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit type" onClick={() => setModal({ id: s.id, field: 'type', label: 'Type', value: s.type || '' })}><EditIcon /></button>)}
                   </td>
-                  <td className="legacy-td" title={s.asset || ''}>
-                    <span>{s.asset || '—'}</span>
-                    {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit asset" onClick={() => setModal({ id: s.id, field: 'asset', label: 'Asset', value: s.asset || '' })}><EditIcon /></button>)}
+                  <td className="legacy-td">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FileLink url={s.asset} />
+                      {canEdit && (
+                        <button
+                          className="legacy-icon-btn edit-btn"
+                          title="Edit asset URL"
+                          onClick={() => setModal({ id: s.id, field: 'asset', label: 'Asset URL', value: s.asset || '' })}
+                        >
+                          <EditIcon />
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="legacy-td" title={s.hdrLink || ''}>
                     <span>{s.hdrLink || '—'}</span>

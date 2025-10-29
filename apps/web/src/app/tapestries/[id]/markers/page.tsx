@@ -34,6 +34,10 @@ export default function MarkersPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<any>({ sceneId: "", overviewId: "", markerLabel: "", lat: "", lon: "", markerColor: "", fontColor: "", fontSize: "", startTime: "", endTime: "", interactiveId: "", interactiveHighlightId: "" });
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
+  const [scenes, setScenes] = useState<any[]>([]);
+  const [interactives, setInteractives] = useState<any[]>([]);
+  const [highlights, setHighlights] = useState<any[]>([]);
+  const [linkedOverviewId, setLinkedOverviewId] = useState<number | null>(null);
 
   async function load() {
     if (!id) return;
@@ -44,11 +48,21 @@ export default function MarkersPage() {
       setMe(meRes.data || null);
       const three = !!t.data?.isThreeJS;
       setIsThreeJS(three);
+      setScenes(Array.isArray(t.data?.scenes) ? t.data.scenes : []);
+      setLinkedOverviewId(typeof t.data?.overviewId === 'number' ? Number(t.data.overviewId) : null);
       if (!three) {
         setItems([]);
+        setInteractives([]);
+        setHighlights([]);
       } else {
-        const res = await api.get(`/tapestries/${id}/markers`);
-        setItems(Array.isArray(res.data) ? res.data : []);
+        const [markersRes, interactivesRes, highlightsRes] = await Promise.all([
+          api.get(`/tapestries/${id}/markers`),
+          api.get(`/tapestries/${id}/interactives`),
+          api.get(`/tapestries/${id}/interactive-highlights`)
+        ]);
+        setItems(Array.isArray(markersRes.data) ? markersRes.data : []);
+        setInteractives(Array.isArray(interactivesRes.data) ? interactivesRes.data : []);
+        setHighlights(Array.isArray(highlightsRes.data) ? highlightsRes.data : []);
       }
     } catch (e: any) {
       const status = e?.response?.status; const message = e?.response?.data || e?.message;
@@ -70,6 +84,22 @@ export default function MarkersPage() {
     }
     return Array.from(byScene.entries());
   }, [items]);
+
+  const interactiveLookup = useMemo(() => {
+    const map = new Map<number, any>();
+    for (const i of interactives) {
+      if (i?.id != null) map.set(i.id, i);
+    }
+    return map;
+  }, [interactives]);
+
+  const highlightLookup = useMemo(() => {
+    const map = new Map<number, any>();
+    for (const h of highlights) {
+      if (h?.id != null) map.set(h.id, h);
+    }
+    return map;
+  }, [highlights]);
 
   return (
     <main style={{ padding: 24 }}>
@@ -131,7 +161,23 @@ export default function MarkersPage() {
                         {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit times" onClick={() => setModal({ id: m.id, field: 'startTime', label: 'Start / End', value: `${m.startTime ?? ''}/${m.endTime ?? ''}` })}><EditIcon /></button>)}
                       </td>
                       <td className="legacy-td">
-                        <span>{m.interactiveId ?? '—'}{m.interactiveHighlightId ? ` / IH ${m.interactiveHighlightId}` : ''}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {(() => {
+                            const info = m.interactiveId != null ? interactiveLookup.get(m.interactiveId) : null;
+                            if (info) {
+                              return <span>{`Interactive #${info.id}${info.sceneSequence ? ` – Scene ${info.sceneSequence}` : ''}`}</span>;
+                            }
+                            return <span>Interactive: <span className="legacy-muted">—</span></span>;
+                          })()}
+                          {(() => {
+                            const highlight = m.interactiveHighlightId != null ? highlightLookup.get(m.interactiveHighlightId) : null;
+                            if (!highlight) return null;
+                            const parts = [`Highlight #${highlight.id}`];
+                            if (highlight.sceneSequence) parts.push(`Scene ${highlight.sceneSequence}`);
+                            if (highlight.popupTitle) parts.push(highlight.popupTitle);
+                            return <span className="legacy-muted" style={{ fontSize: 12 }}>{parts.join(' – ')}</span>;
+                          })()}
+                        </div>
                         {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit interactive" onClick={() => setModal({ id: m.id, field: 'interactiveId', label: 'Interactive / Highlight', value: `${m.interactiveId ?? ''}/${m.interactiveHighlightId ?? ''}` })}><EditIcon /></button>)}
                       </td>
                       {canEdit && (
@@ -157,9 +203,21 @@ export default function MarkersPage() {
             <h3 style={{ marginTop: 0 }}>Add Marker</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
               <label>Scene ID</label>
-              <input value={form.sceneId} onChange={(e) => setForm({ ...form, sceneId: e.target.value })} />
+              <select value={form.sceneId} onChange={(e) => setForm({ ...form, sceneId: e.target.value })}>
+                <option value="">None</option>
+                {scenes.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.sequence || s.id}{s.title ? ` - ${s.title}` : ''}
+                  </option>
+                ))}
+              </select>
               <label>Overview ID</label>
-              <input value={form.overviewId} onChange={(e) => setForm({ ...form, overviewId: e.target.value })} />
+              <select value={form.overviewId} onChange={(e) => setForm({ ...form, overviewId: e.target.value })}>
+                <option value="">None</option>
+                {linkedOverviewId != null && (
+                  <option value={String(linkedOverviewId)}>Overview #{linkedOverviewId}</option>
+                )}
+              </select>
               <label>Label</label>
               <input value={form.markerLabel} onChange={(e) => setForm({ ...form, markerLabel: e.target.value })} />
               <label>Lat</label>
@@ -177,13 +235,29 @@ export default function MarkersPage() {
               <label>End Time</label>
               <input value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} />
               <label>Interactive ID</label>
-              <input value={form.interactiveId} onChange={(e) => setForm({ ...form, interactiveId: e.target.value })} />
+              <select value={form.interactiveId} onChange={(e) => setForm({ ...form, interactiveId: e.target.value })}>
+                <option value="">None</option>
+                {interactives.map((i) => (
+                  <option key={i.id} value={String(i.id)}>
+                    Interactive #{i.id}{i.sceneSequence ? ` - Scene ${i.sceneSequence}` : ''}
+                  </option>
+                ))}
+              </select>
               <label>Interactive Highlight ID</label>
-              <input value={form.interactiveHighlightId} onChange={(e) => setForm({ ...form, interactiveHighlightId: e.target.value })} />
+              <select value={form.interactiveHighlightId} onChange={(e) => setForm({ ...form, interactiveHighlightId: e.target.value })}>
+                <option value="">None</option>
+                {highlights.map((h) => (
+                  <option key={h.id} value={String(h.id)}>
+                    {`Highlight #${h.id}`}
+                    {h.sceneSequence ? ` – Scene ${h.sceneSequence}` : ''}
+                    {h.popupTitle ? ` – ${h.popupTitle}` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="modal-actions">
               <button className="btn" onClick={() => setAddOpen(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={async () => {
+              <button className="btn btn-primary" disabled={!id || (!form.sceneId && !form.overviewId)} onClick={async () => {
                 try {
                   await ensureSignedIn();
                   await api.post(`/tapestries/${id}/markers`, {
@@ -212,7 +286,47 @@ export default function MarkersPage() {
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-            <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
+            {modal.label === 'Interactive / Highlight' ? (() => {
+              const [interactivePart = '', highlightPart = ''] = (modal.value || '').split('/');
+              const highlightOptions = highlights.filter((h) => !interactivePart || String(h.interactiveId ?? '') === interactivePart);
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                  <select
+                    value={interactivePart}
+                    onChange={(e) => {
+                      const nextInteractive = e.target.value;
+                      setModal({ ...modal, value: `${nextInteractive ?? ''}/` });
+                    }}
+                  >
+                    <option value="">None</option>
+                    {interactives.map((i) => (
+                      <option key={i.id} value={String(i.id)}>
+                        {`Interactive #${i.id}`}{i.sceneSequence ? ` – Scene ${i.sceneSequence}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={highlightPart}
+                    onChange={(e) => {
+                      const nextHighlight = e.target.value;
+                      setModal({ ...modal, value: `${interactivePart ?? ''}/${nextHighlight}` });
+                    }}
+                  >
+                    <option value="">None</option>
+                    {highlightOptions.map((h) => (
+                      <option key={h.id} value={String(h.id)}>
+                        {`Highlight #${h.id}`}
+                        {h.sceneSequence ? ` – Scene ${h.sceneSequence}` : ''}
+                        {h.popupTitle ? ` – ${h.popupTitle}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })()
+            : (
+              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
+            )}
             <div className="modal-actions">
               <button className="btn" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={async () => {

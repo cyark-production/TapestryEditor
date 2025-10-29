@@ -10,13 +10,38 @@ function formatBytes(bytes: number): string {
 
 export async function fetchFileSize(url: string): Promise<string | null> {
   if (sizeCache.has(url)) return sizeCache.get(url)!;
+  async function record(length?: string | null) {
+    if (!length) return null;
+    const formatted = formatBytes(Number(length));
+    sizeCache.set(url, formatted);
+    return formatted;
+  }
+
   try {
     const resp = await fetch(url, { method: 'HEAD' });
-    const len = resp.headers.get('content-length');
-    if (len) {
-      const formatted = formatBytes(Number(len));
-      sizeCache.set(url, formatted);
-      return formatted;
+    if (resp.ok) {
+      const len = resp.headers.get('content-length');
+      const fromHead = await record(len);
+      if (fromHead) return fromHead;
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { Range: 'bytes=0-0' }
+    });
+    if (resp.ok) {
+      const len = resp.headers.get('content-length');
+      const range = resp.headers.get('content-range');
+      const total = range?.match(/\/(\d+)$/)?.[1];
+      const recorded = await record(total || len);
+      if (resp.body) {
+        try { resp.body.cancel(); } catch {}
+      }
+      if (recorded) return recorded;
     }
   } catch {
     // ignore

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, ensureSignedIn } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon, ToggleIcon } from "../../../../components/icons";
+import { FileLink } from "../../../../components/FileLink";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 
 type Row = {
@@ -34,6 +35,7 @@ export default function SceneHighlightsPage() {
   const [modal, setModal] = useState<{ id: number; field: keyof Row; label: string; value: string } | null>(null);
   const [form, setForm] = useState<any>({ sceneId: "", startTime: "", endTime: "", fade: "", sketchfabMaterialId: "", sketchfabModelId: "", highlightPosition: "", highlightRotation: "", highlightScale: "", highlightModelUrl: "", shadowEnabled: false, animationType: "", entranceExitAnimation: "" });
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
+  const [scenes, setScenes] = useState<any[]>([]);
 
   async function load() {
     if (!id) return;
@@ -48,6 +50,7 @@ export default function SceneHighlightsPage() {
         ]);
         setMe(meRes.data || null);
         setIsThreeJS(!!tRes.data?.isThreeJS);
+        setScenes(Array.isArray(tRes.data?.scenes) ? tRes.data.scenes : []);
       } catch {}
       const res = await api.get(`/tapestries/${id}/scene-highlights`);
       setRows(res.data || []);
@@ -78,7 +81,15 @@ export default function SceneHighlightsPage() {
 
       {canEdit && (
         <div style={{ marginTop: 12 }}>
-          <button className="legacy-icon-btn" title="Add highlight" onClick={() => { setForm({ sceneId: "", startTime: "", endTime: "", fade: "", sketchfabMaterialId: "", sketchfabModelId: "", highlightPosition: "", highlightRotation: "", highlightScale: "", highlightModelUrl: "", shadowEnabled: false, animationType: "", entranceExitAnimation: "" }); setAddOpen(true); }}><AddIcon /></button>
+          <button
+            className="legacy-icon-btn add-btn"
+            onClick={() => {
+              setForm({ sceneId: "", startTime: "", endTime: "", fade: "", sketchfabMaterialId: "", sketchfabModelId: "", highlightPosition: "", highlightRotation: "", highlightScale: "", highlightModelUrl: "", shadowEnabled: false, animationType: "", entranceExitAnimation: "" });
+              setAddOpen(true);
+            }}
+          >
+            <AddIcon /> Add Highlight
+          </button>
         </div>
       )}
 
@@ -149,8 +160,18 @@ export default function SceneHighlightsPage() {
                         </div>
                       </td>
                       <td className="legacy-td col-expand">
-                        <span>{r.highlightModelUrl || '—'}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit model URL" onClick={() => setModal({ id: r.id, field: 'highlightModelUrl', label: 'Highlight Model URL', value: r.highlightModelUrl || '' })}><EditIcon /></button>)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <FileLink url={r.highlightModelUrl} />
+                          {canEdit && (
+                            <button
+                              className="legacy-icon-btn edit-btn"
+                              title="Edit model URL"
+                              onClick={() => setModal({ id: r.id, field: 'highlightModelUrl', label: 'Highlight Model URL', value: r.highlightModelUrl || '' })}
+                            >
+                              <EditIcon />
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="legacy-td">
                         <div>
@@ -188,7 +209,14 @@ export default function SceneHighlightsPage() {
             <h3 style={{ marginTop: 0 }}>Add Scene Highlight</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
               <label>Scene</label>
-              <input placeholder="Scene ID" value={form.sceneId} onChange={(e) => setForm({ ...form, sceneId: e.target.value })} />
+              <select value={form.sceneId} onChange={(e) => setForm({ ...form, sceneId: e.target.value })}>
+                <option value="">Select a scene…</option>
+                {scenes.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.sequence || s.id}{s.title ? ` - ${s.title}` : ''}
+                  </option>
+                ))}
+              </select>
               <label>Start Time</label>
               <input value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
               <label>End Time</label>
@@ -221,7 +249,7 @@ export default function SceneHighlightsPage() {
                 try {
                   await ensureSignedIn();
                   await api.post(`/tapestries/${id}/scene-highlights`, {
-                    sceneId: Number(form.sceneId),
+                    sceneId: form.sceneId ? Number(form.sceneId) : null,
                     startTime: form.startTime ? Number(form.startTime) : null,
                     endTime: form.endTime ? Number(form.endTime) : null,
                     fade: form.fade ? Number(form.fade) : null,

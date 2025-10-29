@@ -59,7 +59,9 @@ export default function MediaItemsPage() {
       {error && <p style={{ color: 'crimson' }}>{error}</p>}
       {canEdit && (
         <div style={{ marginTop: 12 }}>
-          <button className="legacy-icon-btn" title="Add media item" onClick={() => { setForm({ sceneId: "", title: "", titleAltLang: "", caption: "", captionAltLang: "", type: "image", assetLink: "", assetThumbLink: "", assetSecondaryLink: "", assetAltDesc: "", assetCc: "", assetCcAlt: "", order: "", credit: "", creditAltLang: "" }); setAddOpen(true); }}><AddIcon /></button>
+          <button className="legacy-icon-btn add-btn" onClick={() => { setForm({ sceneId: "", title: "", titleAltLang: "", caption: "", captionAltLang: "", type: "image", assetLink: "", assetThumbLink: "", assetSecondaryLink: "", assetAltDesc: "", assetCc: "", assetCcAlt: "", order: "", credit: "", creditAltLang: "" }); setAddOpen(true); }}>
+            <AddIcon /> Add Media Item
+          </button>
         </div>
       )}
       {items.length > 0 ? (

@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Providers } from "../providers";
+import { msalInstance } from "../providers";
+import { EventType } from "@azure/msal-browser";
 import { getSelectedTapestryId, SELECTED_TAPESTRY_EVENT, api, attachTokenIfSignedIn, ensureSignedIn } from "../lib/api";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -41,6 +43,29 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         // ignore
       }
     })();
+  }, []);
+  useEffect(() => {
+    // React to MSAL login/token events to update header immediately after first sign-in
+    let callbackId: string | null = null;
+    (async () => {
+      try { await msalInstance.initialize(); } catch {}
+      callbackId = msalInstance.addEventCallback(async (event) => {
+        if (
+          event.eventType === EventType.LOGIN_SUCCESS ||
+          event.eventType === EventType.ACQUIRE_TOKEN_SUCCESS ||
+          event.eventType === EventType.ACCOUNT_ADDED
+        ) {
+          const ok = await attachTokenIfSignedIn();
+          if (ok) {
+            try {
+              const res = await api.get('/auth/me');
+              setMe(res.data);
+            } catch {}
+          }
+        }
+      });
+    })();
+    return () => { if (callbackId) msalInstance.removeEventCallback(callbackId); };
   }, []);
   useEffect(() => {
     (async () => {

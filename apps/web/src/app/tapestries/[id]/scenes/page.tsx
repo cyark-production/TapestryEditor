@@ -6,6 +6,7 @@ import { AddIcon, EditIcon, TrashIcon, ToggleIcon } from "../../../../components
 import { FileLink } from "../../../../components/FileLink";
 import { CcEditor } from "../../../../components/CcEditor";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
+import Link from "next/link";
 
 export default function TapestryScenesTab() {
   const params = useParams();
@@ -180,32 +181,62 @@ export default function TapestryScenesTab() {
                           {canEdit && (<button className="legacy-icon-btn edit-btn" title="Toggle instant move" onClick={async () => { try { await ensureSignedIn(); await api.put(`/scenes/${s.id}`, { instantMove: !(s as any).instantMove }); load(); } catch {} }}><ToggleIcon on={(s as any).instantMove} /></button>)}
 
                           <label>Interactive ID</label>
-                          <div>{(s as any).interactiveId ?? <span className="legacy-muted">—</span>}</div>
+                          <div>
+                            {(s as any).interactiveId != null ? (
+                              <Link
+                                href={`/tapestries/${id}/interactives#interactive-${(s as any).interactiveId}`}
+                                style={{ color: 'var(--primary)', textDecoration: 'underline', fontWeight: 500 }}
+                              >
+                                {(s as any).interactiveId}
+                              </Link>
+                            ) : (
+                              <span className="legacy-muted">—</span>
+                            )}
+                          </div>
                           {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit interactive ID" onClick={() => setModal({ id: s.id, field: 'interactiveId' as any, label: 'Interactive ID', value: (s as any).interactiveId != null ? String((s as any).interactiveId) : '' })}><EditIcon /></button>)}
-
-                          <label>Tapestry ID</label>
-                          <div>{(s as any).tapestryId ?? <span className="legacy-muted">—</span>}</div>
-                          <span />
                         </div>
                       </div>
                     </td>
                   </tr>
                 )}
-                  {lang2 && (
-                    <tr key={`alt-${s.id}`}>
-                      <td className="legacy-td col-id legacy-muted"></td>
-                      <td className="legacy-td legacy-muted"></td>
-                      <td className="legacy-td">
-                        <span>{s.titleAltLang || ''}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit Title (${lang2})`} onClick={() => setModal({ id: s.id, field: 'titleAltLang', label: `Title (${lang2})`, value: s.titleAltLang || '' })}><EditIcon /></button>)}
-                      </td>
-                      <td className="legacy-td col-expand">
-                        <span>{s.descriptionAltLang || ''}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit Description (${lang2})`} onClick={() => setModal({ id: s.id, field: 'descriptionAltLang', label: `Description (${lang2})`, value: s.descriptionAltLang || '' })}><EditIcon /></button>)}
-                      </td>
-                      <td className="legacy-td col-actions"></td>
-                    </tr>
-                  )}
+                {lang2 && (
+                  <tr key={`alt-${s.id}`} className="secondary-lang-row">
+                    <td className="legacy-td" style={{ width: '40px' }} />
+                    <td className="legacy-td col-id legacy-muted" title={lang2}>{lang2?.slice(0, 3) || ''}</td>
+                    <td className="legacy-td legacy-muted" style={{ fontStyle: 'italic' }}>—</td>
+                    <td className="legacy-td">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="legacy-muted" style={{ fontSize: 12 }}>{`Title (${lang2})`}</span>
+                        <span>{s.titleAltLang || <span className="legacy-muted">—</span>}</span>
+                      </div>
+                      {canEdit && (
+                        <button
+                          className="legacy-icon-btn edit-btn"
+                          title={`Edit Title (${lang2})`}
+                          onClick={() => setModal({ id: s.id, field: 'titleAltLang', label: `Title (${lang2})`, value: s.titleAltLang || '' })}
+                        >
+                          <EditIcon />
+                        </button>
+                      )}
+                    </td>
+                    <td className="legacy-td col-expand">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span className="legacy-muted" style={{ fontSize: 12 }}>{`Description (${lang2})`}</span>
+                        <span>{s.descriptionAltLang || <span className="legacy-muted">—</span>}</span>
+                      </div>
+                      {canEdit && (
+                        <button
+                          className="legacy-icon-btn edit-btn"
+                          title={`Edit Description (${lang2})`}
+                          onClick={() => setModal({ id: s.id, field: 'descriptionAltLang', label: `Description (${lang2})`, value: s.descriptionAltLang || '' })}
+                        >
+                          <EditIcon />
+                        </button>
+                      )}
+                    </td>
+                    <td className="legacy-td" colSpan={2} />
+                  </tr>
+                )}
                 </>
               ))}
             </tbody>
