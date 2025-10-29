@@ -130,12 +130,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 }}>Tapestry List</Link>
                 <Link href="/analytics" style={{ 
                   padding: '8px 16px', 
-                  borderRadius: '8px',
-                  textDecoration: 'none',
+                  borderRadius: '8px', 
+                  textDecoration: 'none', 
                   color: pathname === '/analytics' ? 'var(--primary)' : 'var(--text-secondary)',
                   fontWeight: 500,
                   transition: 'all 0.2s ease'
                 }}>Analytics</Link>
+                <Link href="/settings/home" style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  color: pathname?.startsWith('/settings') ? 'var(--primary)' : 'var(--text-secondary)',
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease'
+                }}>Global Settings</Link>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 20, opacity: me ? 1 : 0.6 }}>
                 {selectedMeta && (

@@ -75,17 +75,11 @@ export default function TapestryEditorLayout({ children }: { children: ReactNode
           <Item href="markers" label="Markers" icon="📍" />
           <Item href="voices" label="Voices" icon="🎤" />
           <Item href="voice-clips" label="Voice Clips" icon="🗣️" />
-        </ul>
-        <SectionHeader>Assets</SectionHeader>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          <Item href="resources" label="Resources" icon="📚" />
-          <Item href="media-items" label="Media Items" icon="🖼️" />
-        </ul>
-        <SectionHeader>Interactive</SectionHeader>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           <Item href="interactives" label="Interactives" icon="🎮" />
           <Item href="scene-highlights" label="Scene Highlights" icon="✨" />
           <Item href="interactive-highlights" label="Interactive Highlights" icon="🎯" />
+          <Item href="resources" label="Resources" icon="📚" />
+          <Item href="media-items" label="Media Items" icon="🖼️" />
         </ul>
         <SectionHeader>System</SectionHeader>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
