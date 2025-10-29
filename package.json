@@ -10,6 +10,9 @@
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "prisma": "5.20.0"
+  },
   "scripts": {
     "prebuild": "npm run -w @tapestry/db generate",
     "build": "npm run -w @tapestry/db build && npm run -w @tapestry/api build && npm run -w @tapestry/web build",
