@@ -14,6 +14,7 @@
     "prebuild": "npm run -w @tapestry/db generate",
     "build": "npm run -w @tapestry/db build && npm run -w @tapestry/api build && npm run -w @tapestry/web build",
     "dev": "npm run -w @tapestry/api dev",
+    "postinstall": "npm run -w @tapestry/db generate",
     "format": "prettier -w .",
     "lint": "eslint ."
   },
