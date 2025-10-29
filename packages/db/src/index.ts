@@ -1,12 +1,13 @@
 import pkg from "@prisma/client";
-const { PrismaClient } = pkg as unknown as { PrismaClient: new () => any };
+import type { PrismaClient as PrismaClientType } from "@prisma/client";
+const { PrismaClient } = pkg as unknown as { PrismaClient: new () => PrismaClientType };
 
 declare global {
   // eslint-disable-next-line no-var
-  var __prisma__: PrismaClient | undefined;
+  var __prisma__: PrismaClientType | undefined;
 }
 
-export const prisma: PrismaClient = global.__prisma__ ?? new PrismaClient();
+export const prisma: PrismaClientType = global.__prisma__ ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   global.__prisma__ = prisma;
