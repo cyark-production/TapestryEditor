@@ -1490,8 +1490,21 @@ app.get("/themes", authGuard(["Admin", "Editor", "Viewer"]), async (_req, res) =
 
 // Languages list (code -> english name)
 app.get("/languages", authGuard(["Admin", "Editor", "Viewer"]), async (_req, res) => {
-  const rows = await (db as any).$queryRawUnsafe(`SELECT lang_code AS code, english_name AS name FROM language ORDER BY english_name ASC`);
-  res.json(rows || []);
+  const rows: any[] = await (db as any).$queryRawUnsafe(
+    `SELECT 
+        lang_code AS code,
+        english_name AS englishName,
+        native_name AS nativeName,
+        gmaps_lang_code AS gmapsCode,
+        right_to_left AS rightToLeft
+     FROM language
+     ORDER BY english_name ASC`
+  );
+
+  res.json((rows || []).map((row) => ({
+    ...row,
+    rightToLeft: Boolean(row?.rightToLeft)
+  })));
 });
 
 // Overview by tapestry

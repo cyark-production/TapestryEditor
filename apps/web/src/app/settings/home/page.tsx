@@ -117,97 +117,393 @@ export default function SettingsHomePage() {
   };
 
   return (
-    <main style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div>
-        <h2 style={{ marginBottom: 8 }}>Home Page Settings</h2>
-        <p style={{ maxWidth: 720, color: "var(--text-secondary)", margin: 0 }}>
+    <main style={{ maxWidth: 1400, margin: "0 auto" }}>
+      <div style={{ 
+        marginBottom: 32,
+        paddingBottom: 24,
+        borderBottom: "2px solid var(--border)"
+      }}>
+        <h2 style={{ 
+          marginBottom: 8, 
+          fontSize: 28, 
+          fontWeight: 700,
+          background: "linear-gradient(135deg, #FF5C5C 0%, #FF2D79 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text"
+        }}>
+          🏠 Home Page Settings
+        </h2>
+        <p style={{ color: "var(--text-secondary)", margin: 0, fontSize: 15 }}>
           Manage hero imagery, introductory content, and site-wide messaging that appear on the public home page.
         </p>
       </div>
 
       {error && (
-        <div className="error" style={{ maxWidth: 720 }}>
-          {error}
+        <div style={{
+          padding: "16px 20px",
+          marginBottom: 24,
+          borderRadius: 8,
+          background: "#FEE",
+          border: "1px solid #FCC",
+          color: "#C00",
+          fontSize: 14
+        }}>
+          <strong>Error:</strong> {error}
         </div>
       )}
+      
       {success && (
-        <div className="success" style={{ maxWidth: 720 }}>
-          {success}
+        <div style={{
+          padding: "16px 20px",
+          marginBottom: 24,
+          borderRadius: 8,
+          background: "#E8F5E9",
+          border: "1px solid #A5D6A7",
+          color: "#2E7D32",
+          fontSize: 14,
+          display: "flex",
+          alignItems: "center",
+          gap: 8
+        }}>
+          <span>✓</span> <strong>{success}</strong>
         </div>
       )}
 
-      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 24, opacity: loading ? 0.6 : 1 }}>
-        <fieldset style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 20, background: "white" }} disabled={loading || saving}>
-          <legend style={{ padding: "0 8px", fontWeight: 600 }}>Hero</legend>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
-            <LabelInput label="Cover Image" value={form.coverImage} onChange={(v) => updateField("coverImage", v)} />
-            <LabelInput label="Secondary Cover Image" value={form.coverImage2} onChange={(v) => updateField("coverImage2", v)} />
-            <LabelInput label="Cover Image Alt" value={form.coverImageAlt} onChange={(v) => updateField("coverImageAlt", v)} />
-            <LabelInput label="Footer Image" value={form.footerImage} onChange={(v) => updateField("footerImage", v)} />
-            <LabelInput label="Video Link" value={form.videoLink} onChange={(v) => updateField("videoLink", v)} />
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16, marginTop: 16 }}>
-            <LabelInput label="Cover Tagline" value={form.coverTagline} onChange={(v) => updateField("coverTagline", v)} />
-            <LabelInput label="Cover Tagline Subtext" value={form.coverTaglineSubtext} onChange={(v) => updateField("coverTaglineSubtext", v)} />
-          </div>
-        </fieldset>
-
-        <fieldset style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 20, background: "white" }} disabled={loading || saving}>
-          <legend style={{ padding: "0 8px", fontWeight: 600 }}>About Section</legend>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
-            <LabelInput label="About Title" value={form.aboutTitle} onChange={(v) => updateField("aboutTitle", v)} />
-            <LabelTextarea label="About Text" value={form.aboutText} onChange={(v) => updateField("aboutText", v)} rows={4} />
-            <LabelTextarea label="Secondary About Text" value={form.aboutText2} onChange={(v) => updateField("aboutText2", v)} rows={4} />
-            <LabelTextarea label="Community Made Description" value={form.communityMadeDescription} onChange={(v) => updateField("communityMadeDescription", v)} rows={3} />
-          </div>
-        </fieldset>
-
-        <fieldset style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 20, background: "white" }} disabled={loading || saving}>
-          <legend style={{ padding: "0 8px", fontWeight: 600 }}>Meta &amp; SEO</legend>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
-            <LabelTextarea label="Meta Description" value={form.metaDescription} onChange={(v) => updateField("metaDescription", v)} rows={3} />
-            <LabelInput label="Meta Image" value={form.metaImage} onChange={(v) => updateField("metaImage", v)} />
-          </div>
-        </fieldset>
-
-        <fieldset style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 20, background: "white" }} disabled={loading || saving}>
-          <legend style={{ padding: "0 8px", fontWeight: 600 }}>Policies &amp; Accessibility</legend>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 16 }}>
-            <LabelTextarea label="Accessibility Statement" value={form.accessibilityStatement} onChange={(v) => updateField("accessibilityStatement", v)} rows={4} />
-            <LabelTextarea label="Privacy Policy" value={form.privacyPolicy} onChange={(v) => updateField("privacyPolicy", v)} rows={6} />
-            <LabelTextarea label="Content Use & Embed Policy" value={form.contentUseEmbedPolicy} onChange={(v) => updateField("contentUseEmbedPolicy", v)} rows={5} />
-          </div>
-        </fieldset>
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading || saving || !hasChanges}
-            style={{ minWidth: 140 }}
-          >
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
+      {loading && (
+        <div style={{ 
+          textAlign: "center", 
+          padding: 60,
+          color: "var(--text-secondary)",
+          fontSize: 15
+        }}>
+          Loading settings…
         </div>
-      </form>
+      )}
+
+      {!loading && (
+        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <Section 
+            icon="🎨" 
+            title="Hero Section" 
+            description="Primary visual elements and messaging displayed on the landing page"
+            disabled={saving}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+              <LabelInput 
+                label="Cover Image URL" 
+                value={form.coverImage} 
+                onChange={(v) => updateField("coverImage", v)}
+                placeholder="https://..."
+              />
+              <LabelInput 
+                label="Secondary Cover Image URL" 
+                value={form.coverImage2} 
+                onChange={(v) => updateField("coverImage2", v)}
+                placeholder="https://..."
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+              <LabelInput 
+                label="Cover Image Alt Text" 
+                value={form.coverImageAlt} 
+                onChange={(v) => updateField("coverImageAlt", v)}
+                placeholder="Descriptive alt text"
+              />
+              <LabelInput 
+                label="Footer Image URL" 
+                value={form.footerImage} 
+                onChange={(v) => updateField("footerImage", v)}
+                placeholder="https://..."
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+              <LabelInput 
+                label="Cover Tagline" 
+                value={form.coverTagline} 
+                onChange={(v) => updateField("coverTagline", v)}
+                placeholder="Main headline"
+              />
+              <LabelInput 
+                label="Cover Tagline Subtext" 
+                value={form.coverTaglineSubtext} 
+                onChange={(v) => updateField("coverTaglineSubtext", v)}
+                placeholder="Supporting text"
+              />
+            </div>
+            <LabelInput 
+              label="Hero Video URL" 
+              value={form.videoLink} 
+              onChange={(v) => updateField("videoLink", v)}
+              placeholder="https://..."
+            />
+          </Section>
+
+          <Section 
+            icon="📖" 
+            title="About Section" 
+            description="Informational content describing the project and community"
+            disabled={saving}
+          >
+            <div style={{ marginBottom: 20 }}>
+              <LabelInput 
+                label="Section Title" 
+                value={form.aboutTitle} 
+                onChange={(v) => updateField("aboutTitle", v)}
+                placeholder="About This Project"
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <LabelTextarea 
+                label="Primary About Text" 
+                value={form.aboutText} 
+                onChange={(v) => updateField("aboutText", v)} 
+                rows={6}
+                placeholder="Main descriptive content"
+              />
+              <LabelTextarea 
+                label="Secondary About Text" 
+                value={form.aboutText2} 
+                onChange={(v) => updateField("aboutText2", v)} 
+                rows={6}
+                placeholder="Additional context or details"
+              />
+            </div>
+            <div style={{ marginTop: 20 }}>
+              <LabelTextarea 
+                label="Community Made Description" 
+                value={form.communityMadeDescription} 
+                onChange={(v) => updateField("communityMadeDescription", v)} 
+                rows={4}
+                placeholder="Describe community contributions"
+              />
+            </div>
+          </Section>
+
+          <Section 
+            icon="🔍" 
+            title="SEO & Metadata" 
+            description="Search engine optimization and social sharing metadata"
+            disabled={saving}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
+              <LabelTextarea 
+                label="Meta Description" 
+                value={form.metaDescription} 
+                onChange={(v) => updateField("metaDescription", v)} 
+                rows={4}
+                placeholder="Brief summary for search results (150-160 characters)"
+              />
+              <LabelInput 
+                label="Social Share Image URL" 
+                value={form.metaImage} 
+                onChange={(v) => updateField("metaImage", v)}
+                placeholder="https://... (1200x630px)"
+              />
+            </div>
+          </Section>
+
+          <Section 
+            icon="⚖️" 
+            title="Legal & Accessibility" 
+            description="Policies, statements, and compliance information"
+            disabled={saving}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
+              <LabelTextarea 
+                label="Accessibility Statement" 
+                value={form.accessibilityStatement} 
+                onChange={(v) => updateField("accessibilityStatement", v)} 
+                rows={5}
+                placeholder="Describe accessibility features and compliance"
+              />
+              <LabelTextarea 
+                label="Privacy Policy" 
+                value={form.privacyPolicy} 
+                onChange={(v) => updateField("privacyPolicy", v)} 
+                rows={7}
+                placeholder="Data collection and usage policies"
+              />
+              <LabelTextarea 
+                label="Content Use & Embed Policy" 
+                value={form.contentUseEmbedPolicy} 
+                onChange={(v) => updateField("contentUseEmbedPolicy", v)} 
+                rows={6}
+                placeholder="Terms for embedding and reusing content"
+              />
+            </div>
+          </Section>
+
+          <div style={{ 
+            position: "sticky",
+            bottom: 0,
+            padding: "20px 0",
+            marginTop: 8,
+            background: "var(--bg-secondary)",
+            borderTop: "2px solid var(--border)",
+            display: "flex", 
+            justifyContent: "flex-end", 
+            gap: 12,
+            zIndex: 10
+          }}>
+            {hasChanges && (
+              <span style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                marginRight: "auto",
+                color: "var(--text-secondary)",
+                fontSize: 14,
+                fontStyle: "italic"
+              }}>
+                ● Unsaved changes
+              </span>
+            )}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving || !hasChanges}
+              style={{ 
+                minWidth: 160,
+                fontSize: 15,
+                fontWeight: 600,
+                padding: "12px 24px"
+              }}
+            >
+              {saving ? "💾 Saving…" : "💾 Save All Changes"}
+            </button>
+          </div>
+        </form>
+      )}
     </main>
   );
 }
 
-function LabelInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function Section({ 
+  icon, 
+  title, 
+  description, 
+  children, 
+  disabled 
+}: { 
+  icon: string; 
+  title: string; 
+  description: string; 
+  children: React.ReactNode; 
+  disabled: boolean;
+}) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontWeight: 500 }}>{label}</span>
-      <input value={value} onChange={(e) => onChange(e.target.value)} />
+    <fieldset 
+      style={{ 
+        border: "1px solid var(--border)", 
+        borderRadius: 12, 
+        padding: 28,
+        background: "white",
+        boxShadow: "var(--shadow-sm)",
+        transition: "all 0.2s ease"
+      }} 
+      disabled={disabled}
+    >
+      <legend style={{ 
+        padding: "0 12px", 
+        fontWeight: 700, 
+        fontSize: 18,
+        display: "flex",
+        alignItems: "center",
+        gap: 8
+      }}>
+        <span>{icon}</span> {title}
+      </legend>
+      <p style={{ 
+        margin: "0 0 24px", 
+        color: "var(--text-secondary)", 
+        fontSize: 14,
+        lineHeight: 1.5
+      }}>
+        {description}
+      </p>
+      {children}
+    </fieldset>
+  );
+}
+
+function LabelInput({ 
+  label, 
+  value, 
+  onChange, 
+  placeholder 
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <span style={{ 
+        fontWeight: 600, 
+        fontSize: 13,
+        color: "var(--text-primary)",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em"
+      }}>
+        {label}
+      </span>
+      <input 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          padding: "10px 12px",
+          fontSize: 14,
+          borderRadius: 6,
+          border: "1px solid var(--border)",
+          transition: "all 0.2s ease"
+        }}
+      />
     </label>
   );
 }
 
-function LabelTextarea({ label, value, onChange, rows = 3 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) {
+function LabelTextarea({ 
+  label, 
+  value, 
+  onChange, 
+  rows = 3,
+  placeholder
+}: { 
+  label: string; 
+  value: string; 
+  onChange: (value: string) => void; 
+  rows?: number;
+  placeholder?: string;
+}) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontWeight: 500 }}>{label}</span>
-      <textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} style={{ resize: "vertical" }} />
+    <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <span style={{ 
+        fontWeight: 600, 
+        fontSize: 13,
+        color: "var(--text-primary)",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em"
+      }}>
+        {label}
+      </span>
+      <textarea 
+        rows={rows} 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)} 
+        placeholder={placeholder}
+        style={{ 
+          resize: "vertical",
+          padding: "10px 12px",
+          fontSize: 14,
+          borderRadius: 6,
+          border: "1px solid var(--border)",
+          lineHeight: 1.5,
+          fontFamily: "inherit",
+          transition: "all 0.2s ease"
+        }} 
+      />
     </label>
   );
 }
