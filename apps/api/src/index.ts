@@ -1052,7 +1052,7 @@ app.delete("/interactive-highlights/:id", authGuard(["Admin", "Editor"]), async 
 
 let homeSettingsTableName: string | null | undefined;
 async function getHomeSettingsTable(): Promise<string | null> {
-  if (homeSettingsTableName !== undefined) return homeSettingsTableName;
+  if (homeSettingsTableName !== undefined) return homeSettingsTableName ?? null;
   try {
     const rows = await (db as any).$queryRawUnsafe(
       `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME = 'cover_image' LIMIT 1`
@@ -1062,7 +1062,7 @@ async function getHomeSettingsTable(): Promise<string | null> {
   } catch {
     homeSettingsTableName = null;
   }
-  return homeSettingsTableName;
+  return homeSettingsTableName ?? null;
 }
 
 const homeSettingsFieldMap: Record<string, string> = {
