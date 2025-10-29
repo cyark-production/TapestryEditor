@@ -1050,6 +1050,138 @@ app.delete("/interactive-highlights/:id", authGuard(["Admin", "Editor"]), async 
   res.sendStatus(204);
 });
 
+let homeSettingsTableName: string | null | undefined;
+async function getHomeSettingsTable(): Promise<string | null> {
+  if (homeSettingsTableName !== undefined) return homeSettingsTableName;
+  try {
+    const rows = await (db as any).$queryRawUnsafe(
+      `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME = 'cover_image' LIMIT 1`
+    );
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    homeSettingsTableName = row?.TABLE_NAME || row?.table_name || null;
+  } catch {
+    homeSettingsTableName = null;
+  }
+  return homeSettingsTableName;
+}
+
+const homeSettingsFieldMap: Record<string, string> = {
+  coverImage: "cover_image",
+  coverImage2: "cover_image_2",
+  coverImageAlt: "cover_image_alt",
+  coverTagline: "cover_tagline",
+  coverTaglineSubtext: "cover_tagline_subtext",
+  aboutTitle: "about_title",
+  aboutText: "about_text",
+  aboutText2: "about_text_2",
+  metaDescription: "meta_description",
+  metaImage: "meta_image",
+  videoLink: "video_link",
+  footerImage: "footer_image",
+  communityMadeDescription: "community_made_description",
+  accessibilityStatement: "accessibility_statement",
+  privacyPolicy: "privacy_policy",
+  contentUseEmbedPolicy: "content_use_embed_policy",
+};
+
+app.get("/settings/home", authGuard(["Admin", "Editor", "Viewer"]), async (_req, res) => {
+  const table = await getHomeSettingsTable();
+  if (!table) return res.json(null);
+  const row = await (db as any).$queryRawUnsafe(
+    `SELECT 
+        cover_image AS coverImage,
+        cover_image_2 AS coverImage2,
+        cover_image_alt AS coverImageAlt,
+        cover_tagline AS coverTagline,
+        cover_tagline_subtext AS coverTaglineSubtext,
+        about_title AS aboutTitle,
+        about_text AS aboutText,
+        about_text_2 AS aboutText2,
+        meta_description AS metaDescription,
+        meta_image AS metaImage,
+        video_link AS videoLink,
+        footer_image AS footerImage,
+        community_made_description AS communityMadeDescription,
+        accessibility_statement AS accessibilityStatement,
+        privacy_policy AS privacyPolicy,
+        content_use_embed_policy AS contentUseEmbedPolicy
+     FROM ${table}
+     LIMIT 1`
+  );
+  res.json(Array.isArray(row) ? row[0] ?? null : row ?? null);
+});
+
+app.put("/settings/home", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const table = await getHomeSettingsTable();
+  if (!table) return res.status(500).json({ error: "Home settings table not configured" });
+
+  const schema = z
+    .object({
+      coverImage: z.string().max(255).optional().nullable(),
+      coverImage2: z.string().max(255).optional().nullable(),
+      coverImageAlt: z.string().max(255).optional().nullable(),
+      coverTagline: z.string().max(255).optional().nullable(),
+      coverTaglineSubtext: z.string().max(255).optional().nullable(),
+      aboutTitle: z.string().max(255).optional().nullable(),
+      aboutText: z.string().optional().nullable(),
+      aboutText2: z.string().optional().nullable(),
+      metaDescription: z.string().optional().nullable(),
+      metaImage: z.string().max(255).optional().nullable(),
+      videoLink: z.string().max(255).optional().nullable(),
+      footerImage: z.string().max(255).optional().nullable(),
+      communityMadeDescription: z.string().optional().nullable(),
+      accessibilityStatement: z.string().optional().nullable(),
+      privacyPolicy: z.string().optional().nullable(),
+      contentUseEmbedPolicy: z.string().optional().nullable(),
+    })
+    .safeParse(req.body || {});
+
+  if (!schema.success) return res.status(400).json(schema.error.flatten());
+  const entries = Object.entries(schema.data);
+  if (!entries.length) return res.json({});
+
+  const sets: string[] = [];
+  const values: any[] = [];
+  for (const [key, value] of entries) {
+    const column = homeSettingsFieldMap[key];
+    if (!column) continue;
+    if (value == null || value === "") {
+      sets.push(`${column} = NULL`);
+    } else {
+      sets.push(`${column} = ?`);
+      values.push(value);
+    }
+  }
+
+  if (!sets.length) return res.json({});
+
+  await (db as any).$executeRawUnsafe(`UPDATE ${table} SET ${sets.join(", ")} LIMIT 1`, ...values);
+
+  const row = await (db as any).$queryRawUnsafe(
+    `SELECT 
+        cover_image AS coverImage,
+        cover_image_2 AS coverImage2,
+        cover_image_alt AS coverImageAlt,
+        cover_tagline AS coverTagline,
+        cover_tagline_subtext AS coverTaglineSubtext,
+        about_title AS aboutTitle,
+        about_text AS aboutText,
+        about_text_2 AS aboutText2,
+        meta_description AS metaDescription,
+        meta_image AS metaImage,
+        video_link AS videoLink,
+        footer_image AS footerImage,
+        community_made_description AS communityMadeDescription,
+        accessibility_statement AS accessibilityStatement,
+        privacy_policy AS privacyPolicy,
+        content_use_embed_policy AS contentUseEmbedPolicy
+     FROM ${table}
+     LIMIT 1`
+  );
+
+  res.json(Array.isArray(row) ? row[0] ?? null : row ?? null);
+});
+
 // Publishing read - select explicit fields from tapestry
 app.get("/tapestries/:id/publishing", authGuard(["Admin", "Editor", "Viewer"]), async (req, res) => {
   const tapestryId = Number(req.params.id);
