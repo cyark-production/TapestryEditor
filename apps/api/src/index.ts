@@ -70,6 +70,8 @@ app.options("*", cors(corsOptions));
 app.use(morgan("dev"));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+// Avoid noisy 404/503 from browsers auto-requesting a favicon from the API host
+app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
 // Azure Blob SAS for text editing (restricted to Admin/Editor)
 const AZ_BLOB_ACCOUNT = process.env.AZURE_STORAGE_ACCOUNT || "tapestrystorage";
