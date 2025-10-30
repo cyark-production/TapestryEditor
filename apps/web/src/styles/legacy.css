@@ -99,6 +99,16 @@ body {
   min-width: 100px;
 }
 
+.legacy-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .legacy-row-actions button { 
   margin-right: 8px; 
 }

@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon } from "../../../../components/icons";
 import { FileLink } from "../../../../components/FileLink";
+import { VideoPreview } from "../../../../components/VideoPreview";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 import { CcEditor } from "../../../../components/CcEditor";
 
@@ -71,11 +72,14 @@ export default function VoiceClipsPage() {
             <td className="legacy-td">{c.voice?.name || ''}</td>
             <td className="legacy-td">{c.voice?.title || ''}</td>
             <td className="legacy-td col-expand">
-              <span>{c.voiceBubbleText || ''}</span>
+              <span className="legacy-clamp">{c.voiceBubbleText || ''}</span>
               {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit bubble" onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: 'Voice Bubble Text', value: c.voiceBubbleText || '' })}><EditIcon /></button>)}
             </td>
             <td className="legacy-td">
-              <FileLink url={c.voiceVideo} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FileLink url={c.voiceVideo} />
+                <VideoPreview url={c.voiceVideo} width={560} />
+              </div>
               {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit video" onClick={() => setModal({ id: c.id, field: 'voiceVideo', label: 'Voice Video URL', value: c.voiceVideo || '' })}><EditIcon /></button>)}
             </td>
             <td className="legacy-td">
@@ -98,7 +102,7 @@ export default function VoiceClipsPage() {
               <td className="legacy-td legacy-muted"></td>
               <td className="legacy-td legacy-muted"></td>
               <td className="legacy-td col-expand">
-                <span>{c.voiceBubbleTextAlt || ''}</span>
+                <span className="legacy-clamp">{c.voiceBubbleTextAlt || ''}</span>
                 {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit bubble (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: `Voice Bubble Text (${lang2})`, value: c.voiceBubbleTextAlt || '' })}><EditIcon /></button>)}
               </td>
               <td className="legacy-td"></td>

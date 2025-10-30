@@ -3,7 +3,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, ensureSignedIn } from "../../../../lib/api";
-import { filenameFromUrl, useFileSize } from "../../../../lib/files";
+import { FileLink } from "../../../../components/FileLink";
+import { AudioPreview } from "../../../../components/AudioPreview";
+import { VideoPreview } from "../../../../components/VideoPreview";
 
 type Tapestry = {
   id: number;
@@ -27,10 +29,12 @@ type Tapestry = {
   callToActionLink?: string | null;
 };
 
-function Size({ url }: { url?: string | null }) {
-  const size = useFileSize(url);
-  return <>{size ? ` ${size}` : ""}</>;
-}
+type CallToActionOption = {
+  id: number;
+  title: string | null;
+  buttonLabel: string | null;
+  mainText: string | null;
+};
 
 export default function PublishingPage() {
   const params = useParams();
@@ -42,6 +46,7 @@ export default function PublishingPage() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [themes, setThemes] = useState<Array<{ id: number; name: string }>>([]);
   const [me, setMe] = useState<any | null>(null);
+  const [ctas, setCtas] = useState<CallToActionOption[]>([]);
 
   async function load() {
     if (!id) return;
@@ -49,14 +54,16 @@ export default function PublishingPage() {
     setError(null);
     try {
       await ensureSignedIn();
-      const [meRes, res, themesRes] = await Promise.all([
+      const [meRes, res, themesRes, ctasRes] = await Promise.all([
         api.get('/auth/me'),
         api.get(`/tapestries/${id}/publishing`),
-        api.get(`/themes`)
+        api.get(`/themes`),
+        api.get(`/settings/call-to-action`)
       ]);
       setMe(meRes.data || null);
       setItem(res.data as Tapestry);
       setThemes(Array.isArray(themesRes.data) ? themesRes.data : []);
+      setCtas(Array.isArray(ctasRes.data) ? (ctasRes.data as CallToActionOption[]) : []);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -82,7 +89,7 @@ export default function PublishingPage() {
     if (k === 'mapZoom' || k === 'displayWeight' || k === 'communityMade' || k === 'published' || k === 'passwordProtect' || k === 'allowWhiteLabel' || k === 'donateButton') {
       if (value !== '' && !/^[-+]?\d+$/.test(value)) { setModalError('Must be an integer'); return; }
     }
-    const asNumber = (k === 'mapZoom' || k === 'displayWeight' || k === 'communityMade' || k === 'published' || k === 'passwordProtect' || k === 'allowWhiteLabel' || k === 'donateButton');
+    const asNumber = (k === 'mapZoom' || k === 'displayWeight' || k === 'communityMade' || k === 'published' || k === 'passwordProtect' || k === 'allowWhiteLabel' || k === 'donateButton' || k === 'callToActionId');
     const payload: any = { [k]: value === '' ? null : (asNumber ? Number(value) : value) };
     setError(null);
     try {
@@ -107,25 +114,44 @@ export default function PublishingPage() {
             <div className="legacy-section-header" style={{ marginTop: 0 }}>HOMEPAGE CARD</div>
             <div className="detail-grid">
               <label>Headline</label>
-              <div>{item.headline ? item.headline : <span className="legacy-badge legacy-badge-warn">Missing Info</span>}</div>
+              <div>
+                {item.headline ? <span className="legacy-clamp">{item.headline}</span> : <span className="legacy-badge legacy-badge-warn">Missing Info</span>}
+              </div>
               <div className="action-group">
                 {canEdit && (<button className="legacy-icon-btn" onClick={() => openEditor('headline','Headline', item.headline)} title="Edit">✎</button>)}
               </div>
 
               <label>Snippet</label>
-              <div>{item.snippet ? item.snippet : <span className="legacy-badge legacy-badge-warn">Missing Info</span>}</div>
+              <div>
+                {item.snippet ? <span className="legacy-clamp">{item.snippet}</span> : <span className="legacy-badge legacy-badge-warn">Missing Info</span>}
+              </div>
               <div className="action-group">
                 {canEdit && (<button className="legacy-icon-btn" onClick={() => openEditor('snippet','Snippet', item.snippet)} title="Edit">✎</button>)}
               </div>
 
               <label>Hover Video</label>
-              <div>{item.hoverVideo ? (<a className="legacy-link-like" href={item.hoverVideo} target="_blank" rel="noreferrer">{filenameFromUrl(item.hoverVideo)}<span className="legacy-muted"><Size url={item.hoverVideo} /></span></a>) : (<span className="legacy-badge legacy-badge-warn">Missing Info</span>)}</div>
+              <div>
+                {item.hoverVideo ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FileLink url={item.hoverVideo} />
+                    <VideoPreview url={item.hoverVideo} width={640} />
+                  </div>
+                ) : (
+                  <span className="legacy-badge legacy-badge-warn">Missing Info</span>
+                )}
+              </div>
               <div className="action-group">
                 {canEdit && (<button className="legacy-icon-btn" onClick={() => openEditor('hoverVideo','Hover Video URL', item.hoverVideo)} title="Edit">✎</button>)}
               </div>
 
               <label>Tapestry Card Image</label>
-              <div>{item.cardImage ? (<a className="legacy-link-like" href={item.cardImage} target="_blank" rel="noreferrer">{filenameFromUrl(item.cardImage)}<span className="legacy-muted"><Size url={item.cardImage} /></span></a>) : (<span className="legacy-badge legacy-badge-warn">Missing Info</span>)}</div>
+              <div>
+                {item.cardImage ? (
+                  <FileLink url={item.cardImage} />
+                ) : (
+                  <span className="legacy-badge legacy-badge-warn">Missing Info</span>
+                )}
+              </div>
               <div className="action-group">
                 {canEdit && (<button className="legacy-icon-btn" onClick={() => openEditor('cardImage','Tapestry Card Image URL', item.cardImage)} title="Edit">✎</button>)}
               </div>
@@ -180,15 +206,15 @@ export default function PublishingPage() {
               <div>
                 {item.callToActionId ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span style={{ fontWeight: 600 }}>{item.callToActionTitle || `CTA #${item.callToActionId}`}</span>
+                    <span style={{ fontWeight: 600 }} className="legacy-clamp">{item.callToActionTitle || `CTA #${item.callToActionId}`}</span>
                     {item.callToActionMainText && (
-                      <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>{item.callToActionMainText}</span>
+                      <span className="legacy-clamp" style={{ color: "var(--text-secondary)", fontSize: 13 }}>{item.callToActionMainText}</span>
                     )}
                     <span className="legacy-muted" style={{ fontSize: 12 }}>
                       Button: {item.callToActionButtonLabel || "—"}
                     </span>
                     {item.callToActionLink && (
-                      <a className="legacy-link-like" href={item.callToActionLink} target="_blank" rel="noreferrer">
+                      <a className="legacy-link-like legacy-clamp" href={item.callToActionLink} target="_blank" rel="noreferrer">
                         {item.callToActionLink}
                       </a>
                     )}
@@ -199,17 +225,23 @@ export default function PublishingPage() {
               </div>
               <div className="action-group">
                 {canEdit && (
-                  <Link className="legacy-link-like" href="/settings/call-to-action">Manage CTAs</Link>
+                  <button
+                    className="legacy-icon-btn"
+                    title="Change call to action"
+                    onClick={() => openEditor('callToActionId', 'Call to Action', item.callToActionId != null ? String(item.callToActionId) : '')}
+                  >
+                    ✎
+                  </button>
                 )}
               </div>
 
-              <label>Disable Donate Button</label>
-              <div className="legacy-muted">[{item.donateButton ?? 0}] - {item.donateButton ? 'yes' : 'no'}</div>
+              <label>Donate Button</label>
+              <div className="legacy-muted">{item.donateButton === 1 ? 'Visible' : 'Hidden'}</div>
               <div className="action-group">
                 {canEdit && (<button className="btn" onClick={async () => {
                   if (!item) return;
                   try { await api.put(`/tapestries/${item.id}/publishing`, { donateButton: item.donateButton ? 0 : 1 }); load(); } catch (e: any) {}
-                }}>{item.donateButton ? 'Turn Off' : 'Turn On'}</button>)}
+                }}>{item.donateButton === 1 ? 'Hide' : 'Show'}</button>)}
               </div>
 
               <label>Password Protect</label>
@@ -244,7 +276,25 @@ export default function PublishingPage() {
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-            <input style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+            {modal.field === 'callToActionId' ? (
+              <select
+                style={{ width: '100%' }}
+                value={modal.value}
+                onChange={(e) => {
+                  setModal({ ...modal, value: e.target.value });
+                  setModalError(null);
+                }}
+              >
+                <option value="">No CTA</option>
+                {ctas.map((cta) => (
+                  <option key={cta.id} value={String(cta.id)}>
+                    {`CTA #${cta.id} – ${cta.title || 'Untitled'}`}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+            )}
             {modalError && <div style={{ color: 'crimson', marginTop: 8 }}>{modalError}</div>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setModal(null)}>Cancel</button>

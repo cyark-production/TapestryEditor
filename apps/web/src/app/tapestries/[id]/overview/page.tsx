@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
 import { FileLink } from "../../../../components/FileLink";
+import { AudioPreview } from "../../../../components/AudioPreview";
 import { CcEditor } from "../../../../components/CcEditor";
 
 type Overview = {
@@ -121,13 +122,31 @@ export default function OverviewPage() {
             <div className="legacy-section-header" style={{ marginTop: 0 }}>NARRATION</div>
             <div className="detail-grid">
               <label>Audio Narration 1</label>
-              <div><FileLink url={data.audio_narration_1} /></div>
+              <div>
+                {data.audio_narration_1 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FileLink url={data.audio_narration_1} />
+                    <AudioPreview url={data.audio_narration_1} />
+                  </div>
+                ) : (
+                  <FileLink url={data.audio_narration_1} />
+                )}
+              </div>
               <div className="action-group">
                 {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'audio_narration_1', label: 'Audio Narration 1 URL', value: data.audio_narration_1 || '' })}>✎</button>)}
               </div>
               {lang2 && (<>
                 <label>{`Audio Narration 2 (${lang2})`}</label>
-                <div><FileLink url={data.audio_narration_2} /></div>
+                <div>
+                  {data.audio_narration_2 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FileLink url={data.audio_narration_2} />
+                      <AudioPreview url={data.audio_narration_2} />
+                    </div>
+                  ) : (
+                    <FileLink url={data.audio_narration_2} />
+                  )}
+                </div>
                 <div className="action-group">
                   {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'audio_narration_2', label: `Audio Narration 2 (${lang2}) URL`, value: data.audio_narration_2 || '' })}>✎</button>)}
                 </div>

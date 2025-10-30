@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon, ToggleIcon } from "../../../../components/icons";
 import { FileLink } from "../../../../components/FileLink";
+import { AudioPreview } from "../../../../components/AudioPreview";
+import { VideoPreview } from "../../../../components/VideoPreview";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 import { CcEditor } from "../../../../components/CcEditor";
 
@@ -31,6 +33,22 @@ type HighlightForm = {
   depthOfField: string;
   instantMove: boolean;
 };
+
+const VIDEO_EXTENSIONS = ["mp4", "mov", "m4v", "webm", "ogg", "ogv"];
+
+function isVideoLink(mediaType?: string | null, url?: string | null): boolean {
+  if (mediaType && mediaType.toLowerCase().includes("video")) return true;
+  if (!url) return false;
+  const candidate = (() => {
+    try {
+      return new URL(url).pathname;
+    } catch {
+      return url.split("?")[0];
+    }
+  })();
+  const ext = candidate.split(".").pop()?.toLowerCase();
+  return !!ext && VIDEO_EXTENSIONS.includes(ext);
+}
 
 const defaultForm: HighlightForm = {
   interactiveId: "",
@@ -183,7 +201,7 @@ export default function InteractiveHighlightsPage() {
                       )}
                     </td>
                     <td className="legacy-td" style={{ maxWidth: 220 }}>
-                      <span>{h.popupTitle || ""}</span>
+                      <span className="legacy-clamp">{h.popupTitle || ""}</span>
                       {canEdit && (
                         <button
                           className="legacy-icon-btn edit-btn"
@@ -196,7 +214,7 @@ export default function InteractiveHighlightsPage() {
                     </td>
                     <td className="legacy-td" style={{ maxWidth: 260 }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.popupText || <span className="legacy-muted">—</span>}</span>
+                        <span className="legacy-clamp">{h.popupText || <span className="legacy-muted">—</span>}</span>
                       </div>
                       {canEdit && (
                         <button
@@ -209,7 +227,12 @@ export default function InteractiveHighlightsPage() {
                       )}
                     </td>
                     <td className="legacy-td">
-                      <FileLink url={h.popupMediaLink} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <FileLink url={h.popupMediaLink} />
+                        {isVideoLink(h.popupMediaType, h.popupMediaLink) && (
+                          <VideoPreview url={h.popupMediaLink} width={560} />
+                        )}
+                      </div>
                       {canEdit && (
                         <button
                           className="legacy-icon-btn edit-btn"
@@ -250,13 +273,13 @@ export default function InteractiveHighlightsPage() {
                   </tr>
                   {lang2 && (
                     <tr>
-                      <td className="legacy-td" style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)" }}>{lang2.slice(0, 3)}</td>
+                      <td className="legacy-td" style={{ textAlign: "center", fontSize: 12, color: "var(--text-muted)" }}>{lang2}</td>
                       <td className="legacy-td col-id legacy-muted"></td>
                       <td className="legacy-td legacy-muted" style={{ fontStyle: "italic" }}>—</td>
                       <td className="legacy-td" style={{ maxWidth: 220 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <span className="legacy-muted" style={{ fontSize: 12 }}>{`Popup Title (${lang2})`}</span>
-                          <span>{h.popupTitleAltLang || <span className="legacy-muted">—</span>}</span>
+                          <span className="legacy-clamp">{h.popupTitleAltLang || <span className="legacy-muted">—</span>}</span>
                         </div>
                         {canEdit && (
                           <button className="legacy-icon-btn edit-btn" title={`Edit popup title (${lang2})`} onClick={() => setModal({ id: h.id, field: "popupTitleAltLang", label: `Popup Title (${lang2})`, value: h.popupTitleAltLang || "" })}><EditIcon /></button>
@@ -265,7 +288,7 @@ export default function InteractiveHighlightsPage() {
                       <td className="legacy-td" style={{ maxWidth: 260 }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                           <span className="legacy-muted" style={{ fontSize: 12 }}>{`Popup Text (${lang2})`}</span>
-                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.popupTextAltLang || <span className="legacy-muted">—</span>}</span>
+                          <span className="legacy-clamp">{h.popupTextAltLang || <span className="legacy-muted">—</span>}</span>
                         </div>
                         {canEdit && (
                           <button className="legacy-icon-btn edit-btn" title={`Edit popup text (${lang2})`} onClick={() => setModal({ id: h.id, field: "popupTextAltLang", label: `Popup Text (${lang2})`, value: h.popupTextAltLang || "" })}><EditIcon /></button>
@@ -318,12 +341,24 @@ export default function InteractiveHighlightsPage() {
                             <div>{h.popupMediaType || <span className="legacy-muted">—</span>}</div>
                             {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit media type" onClick={() => setModal({ id: h.id, field: "popupMediaType", label: "Popup Media Type", value: h.popupMediaType || "" })}><EditIcon /></button>)}
 
+                            <label>Popup Media URL</label>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <FileLink url={h.popupMediaLink} />
+                              {isVideoLink(h.popupMediaType, h.popupMediaLink) && (
+                                <VideoPreview url={h.popupMediaLink} width={560} />
+                              )}
+                            </div>
+                            {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit media link" onClick={() => setModal({ id: h.id, field: "popupMediaLink", label: "Popup Media URL", value: h.popupMediaLink || "" })}><EditIcon /></button>)}
+
                             <label>Popup Media Alt Desc</label>
                             <div>{h.popupMediaAltDesc || <span className="legacy-muted">—</span>}</div>
                             {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit media alt description" onClick={() => setModal({ id: h.id, field: "popupMediaAltDesc", label: "Popup Media Alt Description", value: h.popupMediaAltDesc || "" })}><EditIcon /></button>)}
 
                             <label>Popup Audio Link</label>
-                            <div><FileLink url={h.popupAudioLink} /></div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <FileLink url={h.popupAudioLink} />
+                              <AudioPreview url={h.popupAudioLink} size={180} />
+                            </div>
                             {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit audio link" onClick={() => setModal({ id: h.id, field: "popupAudioLink", label: "Popup Audio URL", value: h.popupAudioLink || "" })}><EditIcon /></button>)}
 
                             <label>Camera Position</label>

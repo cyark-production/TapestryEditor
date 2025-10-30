@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon, ToggleIcon } from "../../../../components/icons";
 import { FileLink } from "../../../../components/FileLink";
+import { AudioPreview } from "../../../../components/AudioPreview";
 import { CcEditor } from "../../../../components/CcEditor";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 import Link from "next/link";
@@ -101,22 +102,26 @@ export default function TapestryScenesTab() {
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit sequence" onClick={() => setModal({ id: s.id, field: 'sequence', label: 'Sequence', value: s.sequence || '' })}><EditIcon /></button>)}
                     </td>
                     <td className="legacy-td">
-                      <span>{s.title || ''}</span>
+                      <span className="legacy-clamp">{s.title || ''}</span>
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit title" onClick={() => setModal({ id: s.id, field: 'title', label: 'Title', value: s.title || '' })}><EditIcon /></button>)}
                     </td>
                     <td className="legacy-td col-expand">
-                      <span>{s.description || ''}</span>
+                      <span className="legacy-clamp">{s.description || ''}</span>
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit description" onClick={() => setModal({ id: s.id, field: 'description', label: 'Description', value: s.description || '' })}><EditIcon /></button>)}
                     </td>
                   <td className="legacy-td">
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', rowGap: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>Audio 1:</span> <FileLink url={(s as any).audioNarration1} />
+                        <span>Audio 1:</span>
+                        <FileLink url={(s as any).audioNarration1} />
+                        <AudioPreview url={(s as any).audioNarration1} />
                         {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit audio narration 1" onClick={() => setModal({ id: s.id, field: 'audioNarration1' as any, label: 'Audio Narration 1', value: (s as any).audioNarration1 || '' })}><EditIcon /></button>)}
                       </div>
                       {lang2 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span>Audio 2:</span> <FileLink url={(s as any).audioNarration2} />
+                          <span>Audio 2:</span>
+                          <FileLink url={(s as any).audioNarration2} />
+                          <AudioPreview url={(s as any).audioNarration2} />
                           {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit audio narration 2" onClick={() => setModal({ id: s.id, field: 'audioNarration2' as any, label: 'Audio Narration 2', value: (s as any).audioNarration2 || '' })}><EditIcon /></button>)}
                         </div>
                       )}
@@ -202,12 +207,12 @@ export default function TapestryScenesTab() {
                 {lang2 && (
                   <tr key={`alt-${s.id}`} className="secondary-lang-row">
                     <td className="legacy-td" style={{ width: '40px' }} />
-                    <td className="legacy-td col-id legacy-muted" title={lang2}>{lang2?.slice(0, 3) || ''}</td>
+                    <td className="legacy-td col-id legacy-muted" title={lang2}>{lang2 || ''}</td>
                     <td className="legacy-td legacy-muted" style={{ fontStyle: 'italic' }}>—</td>
                     <td className="legacy-td">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span className="legacy-muted" style={{ fontSize: 12 }}>{`Title (${lang2})`}</span>
-                        <span>{s.titleAltLang || <span className="legacy-muted">—</span>}</span>
+                        <span className="legacy-clamp">{s.titleAltLang || <span className="legacy-muted">—</span>}</span>
                       </div>
                       {canEdit && (
                         <button
@@ -222,7 +227,7 @@ export default function TapestryScenesTab() {
                     <td className="legacy-td col-expand">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span className="legacy-muted" style={{ fontSize: 12 }}>{`Description (${lang2})`}</span>
-                        <span>{s.descriptionAltLang || <span className="legacy-muted">—</span>}</span>
+                        <span className="legacy-clamp">{s.descriptionAltLang || <span className="legacy-muted">—</span>}</span>
                       </div>
                       {canEdit && (
                         <button

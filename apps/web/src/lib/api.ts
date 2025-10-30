@@ -72,7 +72,11 @@ export async function getLanguageNames(): Promise<Record<string, string>> {
     const res = await api.get('/languages');
     const map: Record<string, string> = {};
     for (const row of res.data || []) {
-      if (row?.code) map[String(row.code).trim()] = (row?.name || String(row.code)).trim();
+      if (!row?.code) continue;
+      const code = String(row.code).trim();
+      const englishName = (row?.englishName || row?.name || "").toString().trim();
+      const label = englishName || code;
+      map[code] = label;
     }
     languageCache = map;
     return map;

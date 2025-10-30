@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, ensureSignedIn, resolveLanguageName, getLanguageNames } from "../../../../lib/api";
 import { FileLink } from "../../../../components/FileLink";
+import { AudioPreview } from "../../../../components/AudioPreview";
 import { CcEditor } from "../../../../components/CcEditor";
 
 
@@ -395,14 +396,32 @@ export default function GeneralInfoPage() {
             <div className="legacy-section-header" style={{ marginTop: 0 }}>AMBIENT AUDIO</div>
             <div className="detail-grid">
               <label>Ambient Audio</label>
-              <div>{form.ambientAudio ? <FileLink url={form.ambientAudio} /> : <span className="legacy-badge legacy-badge-warn">Missing Info</span>}</div>
+              <div>
+                {form.ambientAudio ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FileLink url={form.ambientAudio} />
+                    <AudioPreview url={form.ambientAudio} />
+                  </div>
+                ) : (
+                  <span className="legacy-badge legacy-badge-warn">Missing Info</span>
+                )}
+              </div>
               <div className="action-group">
                 {canEdit && (<button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudio','Ambient Audio URL', form.ambientAudio)} title="Edit">✎</button>)}
               </div>
               {hasSecondLang && (
                 <>
                   <label>{`Ambient Audio (${lang2})`}</label>
-                  <div>{form.ambientAudioAlt ? <FileLink url={form.ambientAudioAlt} /> : <span className="legacy-muted">—</span>}</div>
+                  <div>
+                    {form.ambientAudioAlt ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FileLink url={form.ambientAudioAlt} />
+                        <AudioPreview url={form.ambientAudioAlt} />
+                      </div>
+                    ) : (
+                      <span className="legacy-muted">—</span>
+                    )}
+                  </div>
                   <div className="action-group">
                     {canEdit && (<button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioAlt',`Ambient Audio (${lang2})`, form.ambientAudioAlt)} title="Edit">✎</button>)}
                   </div>

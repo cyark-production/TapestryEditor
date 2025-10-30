@@ -100,11 +100,11 @@ export default function MediaItemsPage() {
                     </td>
                     <td className="legacy-td col-order">{m.order ?? ''}</td>
                     <td className="legacy-td col-expand">
-                      <span>{m.title || ''}</span>
+                      <span className="legacy-clamp">{m.title || ''}</span>
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit title" onClick={() => setModal({ id: m.id, field: 'title', label: 'Title', value: m.title || '' })}><EditIcon /></button>)}
                     </td>
                     <td className="legacy-td col-expand">
-                      <span>{m.caption || ''}</span>
+                      <span className="legacy-clamp">{m.caption || ''}</span>
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit caption" onClick={() => setModal({ id: m.id, field: 'caption', label: 'Caption', value: m.caption || '' })}><EditIcon /></button>)}
                     </td>
                     <td className="legacy-td">{m.type || ''}</td>
@@ -117,7 +117,7 @@ export default function MediaItemsPage() {
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit thumb" onClick={() => setModal({ id: m.id, field: 'assetThumbLink', label: 'Thumb URL', value: m.assetThumbLink || '' })}><EditIcon /></button>)}
                     </td>
                     <td className="legacy-td col-expand">
-                      <span>{m.credit || ''}</span>
+                      <span className="legacy-clamp">{m.credit || ''}</span>
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit credit" onClick={() => setModal({ id: m.id, field: 'credit', label: 'Credit', value: m.credit || '' })}><EditIcon /></button>)}
                     </td>
                     <td className="legacy-td col-actions legacy-row-actions">
@@ -131,11 +131,11 @@ export default function MediaItemsPage() {
                       <td className="legacy-td"></td>
                       <td className="legacy-td col-order"></td>
                       <td className="legacy-td col-expand">
-                        <span>{m.titleAltLang || ''}</span>
+                        <span className="legacy-clamp">{m.titleAltLang || ''}</span>
                         {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit Title (${lang2})`} onClick={() => setModal({ id: m.id, field: 'titleAltLang', label: `Title (${lang2})`, value: m.titleAltLang || '' })}><EditIcon /></button>)}
                       </td>
                       <td className="legacy-td col-expand">
-                        <span>{m.captionAltLang || ''}</span>
+                        <span className="legacy-clamp">{m.captionAltLang || ''}</span>
                         {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit Caption (${lang2})`} onClick={() => setModal({ id: m.id, field: 'captionAltLang', label: `Caption (${lang2})`, value: m.captionAltLang || '' })}><EditIcon /></button>)}
                       </td>
                       <td className="legacy-td"></td>
@@ -145,7 +145,7 @@ export default function MediaItemsPage() {
                       </td>
                       <td className="legacy-td"></td>
                       <td className="legacy-td col-expand">
-                        <span>{m.creditAltLang || ''}</span>
+                        <span className="legacy-clamp">{m.creditAltLang || ''}</span>
                         {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit Credit (${lang2})`} onClick={() => setModal({ id: m.id, field: 'creditAltLang', label: `Credit (${lang2})`, value: m.creditAltLang || '' })}><EditIcon /></button>)}
                       </td>
                       <td className="legacy-td col-actions"></td>
