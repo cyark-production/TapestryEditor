@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api, ensureSignedIn } from "../../../../lib/api";
@@ -19,6 +20,11 @@ type Tapestry = {
   password?: string | null;
   allowWhiteLabel?: number | null;
   donateButton?: number | null;
+  callToActionId?: number | null;
+  callToActionTitle?: string | null;
+  callToActionButtonLabel?: string | null;
+  callToActionMainText?: string | null;
+  callToActionLink?: string | null;
 };
 
 function Size({ url }: { url?: string | null }) {
@@ -169,6 +175,33 @@ export default function PublishingPage() {
                 )}
               </div>
               <span />
+
+              <label>Call to Action</label>
+              <div>
+                {item.callToActionId ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{item.callToActionTitle || `CTA #${item.callToActionId}`}</span>
+                    {item.callToActionMainText && (
+                      <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>{item.callToActionMainText}</span>
+                    )}
+                    <span className="legacy-muted" style={{ fontSize: 12 }}>
+                      Button: {item.callToActionButtonLabel || "—"}
+                    </span>
+                    {item.callToActionLink && (
+                      <a className="legacy-link-like" href={item.callToActionLink} target="_blank" rel="noreferrer">
+                        {item.callToActionLink}
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <span className="legacy-muted">No CTA assigned</span>
+                )}
+              </div>
+              <div className="action-group">
+                {canEdit && (
+                  <Link className="legacy-link-like" href="/settings/call-to-action">Manage CTAs</Link>
+                )}
+              </div>
 
               <label>Disable Donate Button</label>
               <div className="legacy-muted">[{item.donateButton ?? 0}] - {item.donateButton ? 'yes' : 'no'}</div>

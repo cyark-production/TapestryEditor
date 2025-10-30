@@ -1084,6 +1084,45 @@ const homeSettingsFieldMap: Record<string, string> = {
   contentUseEmbedPolicy: "content_use_embed_policy",
 };
 
+const callToActionFieldMap: Record<string, string> = {
+  title: "title",
+  titleAlt: "title_alt",
+  mainText: "main_text",
+  mainTextAlt: "main_text_alt",
+  buttonLabel: "button_label",
+  buttonLabelAlt: "button_label_alt",
+  link: "link",
+};
+
+const callToActionCreateSchema = z.object({
+  title: z.string().min(1).max(50, "Title must be 50 characters or fewer"),
+  titleAlt: z.string().max(50).optional().nullable(),
+  mainText: z.string().max(255).optional().nullable(),
+  mainTextAlt: z.string().max(255).optional().nullable(),
+  buttonLabel: z.string().max(50).optional().nullable(),
+  buttonLabelAlt: z.string().max(50).optional().nullable(),
+  link: z.string().max(255).optional().nullable(),
+});
+
+const callToActionUpdateSchema = z.object({
+  title: z.string().max(50).optional().nullable(),
+  titleAlt: z.string().max(50).optional().nullable(),
+  mainText: z.string().max(255).optional().nullable(),
+  mainTextAlt: z.string().max(255).optional().nullable(),
+  buttonLabel: z.string().max(50).optional().nullable(),
+  buttonLabelAlt: z.string().max(50).optional().nullable(),
+  link: z.string().max(255).optional().nullable(),
+});
+
+function sanitizeCtaValue(value: any) {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  return value;
+}
+
 app.get("/settings/home", authGuard(["Admin", "Editor", "Viewer"]), async (_req, res) => {
   const table = await getHomeSettingsTable();
   if (!table) return res.json(null);
@@ -1182,6 +1221,126 @@ app.put("/settings/home", authGuard(["Admin", "Editor"]), async (req, res) => {
   res.json(Array.isArray(row) ? row[0] ?? null : row ?? null);
 });
 
+app.get("/settings/call-to-action", authGuard(["Admin", "Editor", "Viewer"]), async (_req, res) => {
+  const rows = await (db as any).$queryRawUnsafe(
+    `SELECT call_to_action_id AS id,
+            title,
+            title_alt AS titleAlt,
+            main_text AS mainText,
+            main_text_alt AS mainTextAlt,
+            button_label AS buttonLabel,
+            button_label_alt AS buttonLabelAlt,
+            link
+     FROM call_to_action
+     ORDER BY call_to_action_id ASC`
+  );
+  res.json(rows || []);
+});
+
+app.post("/settings/call-to-action", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const payload = callToActionCreateSchema.safeParse(req.body || {});
+  if (!payload.success) return res.status(400).json(payload.error.flatten());
+
+  const sanitizedEntries = Object.entries(payload.data).map(([key, value]) => [key, sanitizeCtaValue(value)] as const);
+  const sanitizedMap = Object.fromEntries(sanitizedEntries);
+  if (sanitizedMap.title == null) return res.status(400).json({ title: ["Title is required"] });
+  const columns: string[] = [];
+  const placeholders: string[] = [];
+  const values: any[] = [];
+  for (const [key, value] of Object.entries(sanitizedMap)) {
+    const column = callToActionFieldMap[key];
+    if (!column) continue;
+    columns.push(column);
+    placeholders.push("?");
+    values.push(value);
+  }
+
+  if (!columns.length) return res.status(400).json("No fields to insert");
+
+  await (db as any).$executeRawUnsafe(
+    `INSERT INTO call_to_action (${columns.join(", ")}) VALUES (${placeholders.join(", ")})`,
+    ...values
+  );
+
+  const rows = await (db as any).$queryRawUnsafe(
+    `SELECT call_to_action_id AS id,
+            title,
+            title_alt AS titleAlt,
+            main_text AS mainText,
+            main_text_alt AS mainTextAlt,
+            button_label AS buttonLabel,
+            button_label_alt AS buttonLabelAlt,
+            link
+     FROM call_to_action
+     WHERE call_to_action_id = LAST_INSERT_ID()
+     LIMIT 1`
+  );
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  res.status(201).json(row || null);
+});
+
+app.put("/settings/call-to-action/:id", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json("Invalid call-to-action id");
+
+  const payload = callToActionUpdateSchema.safeParse(req.body || {});
+  if (!payload.success) return res.status(400).json(payload.error.flatten());
+
+  const entries = Object.entries(payload.data);
+  if (!entries.length) return res.status(400).json("No fields to update");
+
+  const sets: string[] = [];
+  const values: any[] = [];
+  for (const [key, value] of entries) {
+    const column = callToActionFieldMap[key];
+    if (!column) continue;
+    const sanitized = sanitizeCtaValue(value);
+    if (sanitized == null) {
+      sets.push(`${column} = NULL`);
+    } else {
+      sets.push(`${column} = ?`);
+      values.push(sanitized);
+    }
+  }
+
+  if (!sets.length) return res.status(400).json("No valid fields provided");
+
+  await (db as any).$executeRawUnsafe(
+    `UPDATE call_to_action SET ${sets.join(", ")} WHERE call_to_action_id = ${id}`,
+    ...values
+  );
+
+  const rows = await (db as any).$queryRawUnsafe(
+    `SELECT call_to_action_id AS id,
+            title,
+            title_alt AS titleAlt,
+            main_text AS mainText,
+            main_text_alt AS mainTextAlt,
+            button_label AS buttonLabel,
+            button_label_alt AS buttonLabelAlt,
+            link
+     FROM call_to_action
+     WHERE call_to_action_id = ${id}
+     LIMIT 1`
+  );
+  const row = Array.isArray(rows) ? rows[0] : rows;
+  res.json(row || null);
+});
+
+app.delete("/settings/call-to-action/:id", authGuard(["Admin", "Editor"]), async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json("Invalid call-to-action id");
+
+  const inUse = await (db as any).$queryRawUnsafe(
+    `SELECT tapestry_id FROM tapestry WHERE call_to_action_id = ${id} LIMIT 1`
+  );
+  const inUseRow = Array.isArray(inUse) ? inUse[0] : inUse;
+  if (inUseRow) return res.status(409).json("Call to action is currently assigned to a tapestry");
+
+  await (db as any).$executeRawUnsafe(`DELETE FROM call_to_action WHERE call_to_action_id = ${id}`);
+  res.sendStatus(204);
+});
+
 // Publishing read - select explicit fields from tapestry
 app.get("/tapestries/:id/publishing", authGuard(["Admin", "Editor", "Viewer"]), async (req, res) => {
   const tapestryId = Number(req.params.id);
@@ -1199,8 +1358,14 @@ app.get("/tapestries/:id/publishing", authGuard(["Admin", "Editor", "Viewer"]), 
             t.donate_button             AS donateButton,
             t.password_protect          AS passwordProtect,
             (SELECT p.password FROM passwords p WHERE p.tapestry_id = t.tapestry_id LIMIT 1) AS password,
-            t.allow_white_label         AS allowWhiteLabel
+            t.allow_white_label         AS allowWhiteLabel,
+            t.call_to_action_id         AS callToActionId,
+            cta.title                   AS callToActionTitle,
+            cta.button_label            AS callToActionButtonLabel,
+            cta.main_text               AS callToActionMainText,
+            cta.link                    AS callToActionLink
      FROM tapestry t
+     LEFT JOIN call_to_action cta ON cta.call_to_action_id = t.call_to_action_id
      WHERE t.tapestry_id = ${tapestryId}
      LIMIT 1`
   );
@@ -1224,6 +1389,7 @@ app.put("/tapestries/:id/publishing", authGuard(["Admin", "Editor"]), async (req
     donateButton: "donate_button",
     passwordProtect: "password_protect",
     allowWhiteLabel: "allow_white_label",
+    callToActionId: "call_to_action_id",
   };
   const payload = req.body as Record<string, any>;
   const entries = Object.entries(payload).filter(([k]) => !!map[k] || k === 'password');

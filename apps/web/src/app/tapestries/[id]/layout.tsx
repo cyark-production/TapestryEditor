@@ -65,7 +65,6 @@ export default function TapestryEditorLayout({ children }: { children: ReactNode
           <Item href="general" label="General Info" icon="📝" />
           <Item href="splash" label="Splash Page" icon="🌊" />
           <Item href="overview" label="Overview" icon="🗺️" />
-          <Item href="cta" label="Call to Action" icon="📢" />
           <Item href="publishing" label="Publishing" icon="🚀" />
         </ul>
         <SectionHeader>Content</SectionHeader>
