@@ -90,19 +90,33 @@ export default function SetsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <FileLink url={s.asset} />
                       {canEdit && (
-                        <button
-                          className="legacy-icon-btn edit-btn"
-                          title="Edit asset URL"
-                          onClick={() => setModal({ id: s.id, field: 'asset', label: 'Asset URL', value: s.asset || '' })}
-                        >
-                          <EditIcon />
-                        </button>
+                        <span className="legacy-icon-group">
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title="Edit asset URL"
+                            onClick={() => setModal({ id: s.id, field: 'asset', label: 'Asset URL', value: s.asset || '' })}
+                          >
+                            <EditIcon />
+                          </button>
+                        </span>
                       )}
                     </div>
                   </td>
-                  <td className="legacy-td" title={s.hdrLink || ''}>
-                    <span>{s.hdrLink || '—'}</span>
-                    {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit HDR link" onClick={() => setModal({ id: s.id, field: 'hdrLink', label: 'HDR Link', value: s.hdrLink || '' })}><EditIcon /></button>)}
+                  <td className="legacy-td">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <FileLink url={s.hdrLink} />
+                      {canEdit && (
+                        <span className="legacy-icon-group">
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title="Edit HDR link"
+                            onClick={() => setModal({ id: s.id, field: 'hdrLink', label: 'HDR Link', value: s.hdrLink || '' })}
+                          >
+                            <EditIcon />
+                          </button>
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="legacy-td">
                     <span>{s.hdrRotation ?? '—'}</span>

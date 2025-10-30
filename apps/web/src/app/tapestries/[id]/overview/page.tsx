@@ -155,15 +155,23 @@ export default function OverviewPage() {
               <label>Narration CC 1</label>
               <div><FileLink url={data.narration_cc_1} /></div>
               <div className="action-group">
-                {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'narration_cc_1', label: 'Narration CC 1 URL', value: data.narration_cc_1 || '' })}>✎</button>)}
-                {canEdit && data.narration_cc_1 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'narration_cc_1', label: 'Edit Narration CC 1', value: data.narration_cc_1 || '' })}>📝</button>)}
+                {canEdit && (
+                  <span className="legacy-icon-group">
+                    <button className="legacy-icon-btn" onClick={() => setModal({ field: 'narration_cc_1', label: 'Narration CC 1 URL', value: data.narration_cc_1 || '' })}>✎</button>
+                    {data.narration_cc_1 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'narration_cc_1', label: 'Edit Narration CC 1', value: data.narration_cc_1 || '' })}>📝</button>)}
+                  </span>
+                )}
               </div>
               {lang2 && (<>
                 <label>{`Narration CC 2 (${lang2})`}</label>
                 <div><FileLink url={data.narration_cc_2} /></div>
                 <div className="action-group">
-                  {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'narration_cc_2', label: `Narration CC 2 (${lang2}) URL`, value: data.narration_cc_2 || '' })}>✎</button>)}
-                  {canEdit && data.narration_cc_2 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'narration_cc_2', label: `Edit Narration CC 2 (${lang2})`, value: data.narration_cc_2 || '' })}>📝</button>)}
+                  {canEdit && (
+                    <span className="legacy-icon-group">
+                      <button className="legacy-icon-btn" onClick={() => setModal({ field: 'narration_cc_2', label: `Narration CC 2 (${lang2}) URL`, value: data.narration_cc_2 || '' })}>✎</button>
+                      {data.narration_cc_2 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'narration_cc_2', label: `Edit Narration CC 2 (${lang2})`, value: data.narration_cc_2 || '' })}>📝</button>)}
+                    </span>
+                  )}
                 </div>
               </>)}
             </div>

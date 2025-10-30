@@ -431,16 +431,24 @@ export default function GeneralInfoPage() {
               <label>Ambient Audio CC 1</label>
               <div>{form.ambientAudioCc1 ? <FileLink url={form.ambientAudioCc1} /> : <span className="legacy-badge legacy-badge-warn">Missing Info</span>}</div>
               <div className="action-group">
-                {canEdit && (<button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc1','Ambient Audio CC 1 URL', form.ambientAudioCc1)} title="Edit">✎</button>)}
-                {canEdit && form.ambientAudioCc1 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc1', label: 'Edit Ambient Audio CC 1', value: form.ambientAudioCc1 })}>📝</button>)}
+                {canEdit && (
+                  <span className="legacy-icon-group">
+                    <button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc1','Ambient Audio CC 1 URL', form.ambientAudioCc1)} title="Edit">✎</button>
+                    {form.ambientAudioCc1 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc1', label: 'Edit Ambient Audio CC 1', value: form.ambientAudioCc1 })}>📝</button>)}
+                  </span>
+                )}
               </div>
               {hasSecondLang && (
                 <>
                   <label>{`Ambient Audio CC 1 (${lang2})`}</label>
                   <div>{form.ambientAudioCc1Alt ? <FileLink url={form.ambientAudioCc1Alt} /> : <span className="legacy-muted">—</span>}</div>
                   <div className="action-group">
-                    {canEdit && (<button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc1Alt',`Ambient Audio CC 1 (${lang2})`, form.ambientAudioCc1Alt)} title="Edit">✎</button>)}
-                    {canEdit && form.ambientAudioCc1Alt && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc1Alt', label: `Edit Ambient Audio CC 1 (${lang2})`, value: form.ambientAudioCc1Alt! })}>📝</button>)}
+                    {canEdit && (
+                      <span className="legacy-icon-group">
+                        <button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc1Alt',`Ambient Audio CC 1 (${lang2})`, form.ambientAudioCc1Alt)} title="Edit">✎</button>
+                        {form.ambientAudioCc1Alt && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc1Alt', label: `Edit Ambient Audio CC 1 (${lang2})`, value: form.ambientAudioCc1Alt! })}>📝</button>)}
+                      </span>
+                    )}
                   </div>
                 </>
               )}
@@ -448,16 +456,24 @@ export default function GeneralInfoPage() {
               <label>Ambient Audio CC 2</label>
               <div>{form.ambientAudioCc2 ? <FileLink url={form.ambientAudioCc2} /> : <span className="legacy-muted">—</span>}</div>
               <div className="action-group">
-                {canEdit && (<button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc2','Ambient Audio CC 2 URL', form.ambientAudioCc2)} title="Edit">✎</button>)}
-                {canEdit && form.ambientAudioCc2 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc2', label: 'Edit Ambient Audio CC 2', value: form.ambientAudioCc2 })}>📝</button>)}
+                {canEdit && (
+                  <span className="legacy-icon-group">
+                    <button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc2','Ambient Audio CC 2 URL', form.ambientAudioCc2)} title="Edit">✎</button>
+                    {form.ambientAudioCc2 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc2', label: 'Edit Ambient Audio CC 2', value: form.ambientAudioCc2 })}>📝</button>)}
+                  </span>
+                )}
               </div>
               {hasSecondLang && (
                 <>
                   <label>{`Ambient Audio CC 2 (${lang2})`}</label>
                   <div>{form.ambientAudioCc2Alt ? <FileLink url={form.ambientAudioCc2Alt} /> : <span className="legacy-muted">—</span>}</div>
                   <div className="action-group">
-                    {canEdit && (<button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc2Alt',`Ambient Audio CC 2 (${lang2})`, form.ambientAudioCc2Alt)} title="Edit">✎</button>)}
-                    {canEdit && form.ambientAudioCc2Alt && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc2Alt', label: `Edit Ambient Audio CC 2 (${lang2})`, value: form.ambientAudioCc2Alt! })}>📝</button>)}
+                    {canEdit && (
+                      <span className="legacy-icon-group">
+                        <button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc2Alt',`Ambient Audio CC 2 (${lang2})`, form.ambientAudioCc2Alt)} title="Edit">✎</button>
+                        {form.ambientAudioCc2Alt && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc2Alt', label: `Edit Ambient Audio CC 2 (${lang2})`, value: form.ambientAudioCc2Alt! })}>📝</button>)}
+                      </span>
+                    )}
                   </div>
                 </>
               )}

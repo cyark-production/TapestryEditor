@@ -4,19 +4,41 @@ import { useParams } from "next/navigation";
 import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon } from "../../../../components/icons";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
+import { FileLink } from "../../../../components/FileLink";
+import { VideoPreview } from "../../../../components/VideoPreview";
+import { CcEditor } from "../../../../components/CcEditor";
 
 export default function VoicesPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
   const [items, setItems] = useState<any[]>([]);
   const [me, setMe] = useState<any | null>(null);
-  const [form, setForm] = useState({ name: "", title: "", order: "" });
+  const [form, setForm] = useState<any>({
+    name: "",
+    nameAltLang: "",
+    title: "",
+    titleAltLang: "",
+    affiliation: "",
+    affiliationAltLang: "",
+    bio: "",
+    bioAltLang: "",
+    introVideo: "",
+    introVideoCc1: "",
+    introVideoCc2: "",
+    headshot: "",
+    headshotAltDesc: "",
+    headshotLarge: "",
+    headshotLargeAltDesc: "",
+    order: ""
+  });
   const [addOpen, setAddOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ id: number; field: 'name' | 'title'; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ id: number; field: string; label: string; value: string; multiline?: boolean } | null>(null);
+  const [lang1, setLang1] = useState<string | null>(null);
   const [lang2, setLang2] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   async function load() {
     if (!id) return;
@@ -31,8 +53,11 @@ export default function VoicesPage() {
       ]);
       setMe(meRes.data || null);
       setItems(Array.isArray(voicesRes.data) ? voicesRes.data : []);
+      const a1 = (tapRes.data?.audioLanguage1 as string | undefined) || "";
+      const l1 = await resolveLanguageName(a1);
       const a2 = (tapRes.data?.audioLanguage2 as string | undefined) || "";
       const l2 = await resolveLanguageName(a2);
+      setLang1(l1 && l1.trim() !== "" ? l1 : null);
       setLang2(l2 && l2.trim() !== "" ? l2 : null);
     } catch (e: any) {
       const status = e?.response?.status;
@@ -45,6 +70,17 @@ export default function VoicesPage() {
   const canEdit = (me?.roles || []).some((r: string) => r === 'Admin' || r === 'Editor');
 
   useEffect(() => { load(); }, [id]);
+
+  const toggleExpand = (voiceId: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(voiceId)) next.delete(voiceId); else next.add(voiceId);
+      return next;
+    });
+  };
+  const isExpanded = (voiceId: number) => expanded.has(voiceId);
+
+  const lang1Label = lang1 || "Primary Language";
 
   return (
     <main style={{ padding: 24 }}>
@@ -63,18 +99,25 @@ export default function VoicesPage() {
           <table className="legacy-table">
             <thead>
               <tr>
+                <th className="legacy-th" style={{ width: '40px' }}></th>
                 <th className="legacy-th" style={{ width: '80px' }}>ID</th>
                 <th className="legacy-th" style={{ width: '100px' }}>Order</th>
                 <th className="legacy-th" style={{ width: '120px' }}>Lang</th>
-                <th className="legacy-th" style={{ width: '30%' }}>Voice Name</th>
-                <th className="legacy-th" style={{ width: 'auto' }}>Voice Title</th>
-                <th className="legacy-th" style={{ width: '80px' }}>Actions</th>
+                <th className="legacy-th" style={{ width: '26%' }}>Voice Name</th>
+                <th className="legacy-th" style={{ width: '26%' }}>Voice Title</th>
+                <th className="legacy-th" style={{ width: '20%' }}>Affiliation</th>
+                {canEdit && (<th className="legacy-th" style={{ width: '80px' }}>Actions</th>)}
               </tr>
             </thead>
             <tbody>
               {items.map((v) => (
                 <>
                   <tr key={v.id}>
+                    <td className="legacy-td" style={{ textAlign: 'center' }}>
+                      <button className="legacy-icon-btn" title={isExpanded(v.id) ? 'Collapse' : 'Expand'} onClick={() => toggleExpand(v.id)}>
+                        {isExpanded(v.id) ? '▾' : '▸'}
+                      </button>
+                    </td>
                     <td className="legacy-td col-id">{v.id}</td>
                     <td className="legacy-td col-order">
                       <span>{v.order ?? ''}</span>
@@ -88,33 +131,219 @@ export default function VoicesPage() {
                         } catch {}
                       }}><EditIcon /></button>)}
                     </td>
-                    <td className="legacy-td">English</td>
+                    <td className="legacy-td">{lang1Label}</td>
                     <td className="legacy-td">
-                      <span>{v.name || ''}</span>
-                      {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit name" onClick={() => setModal({ id: v.id, field: 'name', label: 'Voice Name', value: v.name || '' })}><EditIcon /></button>)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="legacy-clamp">{v.name || ''}</span>
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <button className="legacy-icon-btn edit-btn" title="Edit name" onClick={() => setModal({ id: v.id, field: 'name', label: 'Voice Name', value: v.name || '' })}><EditIcon /></button>
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="legacy-td">
-                      <span>{v.title || ''}</span>
-                      {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit title" onClick={() => setModal({ id: v.id, field: 'title', label: 'Voice Title', value: v.title || '' })}><EditIcon /></button>)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="legacy-clamp">{v.title || ''}</span>
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <button className="legacy-icon-btn edit-btn" title="Edit title" onClick={() => setModal({ id: v.id, field: 'title', label: 'Voice Title', value: v.title || '' })}><EditIcon /></button>
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="legacy-td col-actions legacy-row-actions">
-                      {canEdit && (<button className="legacy-icon-btn delete-btn" title="Delete" onClick={() => setConfirm({ open: true, id: v.id })}><TrashIcon /></button>)}
+                    <td className="legacy-td">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="legacy-clamp">{v.affiliation || <span className="legacy-muted">—</span>}</span>
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <button className="legacy-icon-btn edit-btn" title="Edit affiliation" onClick={() => setModal({ id: v.id, field: 'affiliation', label: 'Affiliation', value: v.affiliation || '' })}><EditIcon /></button>
+                          </span>
+                        )}
+                      </div>
                     </td>
+                    {canEdit && (
+                      <td className="legacy-td col-actions legacy-row-actions">
+                        <button className="legacy-icon-btn delete-btn" title="Delete" onClick={() => setConfirm({ open: true, id: v.id })}><TrashIcon /></button>
+                      </td>
+                    )}
                   </tr>
                   {lang2 && (
                     <tr key={`alt-${v.id}`}>
+                      <td className="legacy-td" style={{ textAlign: 'center' }}></td>
                       <td className="legacy-td col-id legacy-muted"></td>
                       <td className="legacy-td col-order legacy-muted"></td>
                       <td className="legacy-td legacy-muted">{lang2}</td>
                       <td className="legacy-td">
-                        <span>{v.nameAltLang || ''}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit name (${lang2})`} onClick={() => setModal({ id: v.id, field: 'name', label: `Voice Name (${lang2})`, value: v.nameAltLang || '' })}><EditIcon /></button>)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span className="legacy-clamp">{v.nameAltLang || <span className="legacy-muted">—</span>}</span>
+                          {canEdit && (
+                            <span className="legacy-icon-group">
+                              <button className="legacy-icon-btn edit-btn" title={`Edit name (${lang2})`} onClick={() => setModal({ id: v.id, field: 'nameAltLang', label: `Voice Name (${lang2})`, value: v.nameAltLang || '' })}><EditIcon /></button>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="legacy-td">
-                        <span>{v.titleAltLang || ''}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit title (${lang2})`} onClick={() => setModal({ id: v.id, field: 'title', label: `Voice Title (${lang2})`, value: v.titleAltLang || '' })}><EditIcon /></button>)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span className="legacy-clamp">{v.titleAltLang || <span className="legacy-muted">—</span>}</span>
+                          {canEdit && (
+                            <span className="legacy-icon-group">
+                              <button className="legacy-icon-btn edit-btn" title={`Edit title (${lang2})`} onClick={() => setModal({ id: v.id, field: 'titleAltLang', label: `Voice Title (${lang2})`, value: v.titleAltLang || '' })}><EditIcon /></button>
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="legacy-td col-actions"></td>
+                      <td className="legacy-td">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span className="legacy-clamp">{v.affiliationAltLang || <span className="legacy-muted">—</span>}</span>
+                          {canEdit && (
+                            <span className="legacy-icon-group">
+                              <button className="legacy-icon-btn edit-btn" title={`Edit affiliation (${lang2})`} onClick={() => setModal({ id: v.id, field: 'affiliationAltLang', label: `Affiliation (${lang2})`, value: v.affiliationAltLang || '' })}><EditIcon /></button>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      {canEdit && (<td className="legacy-td col-actions"></td>)}
+                    </tr>
+                  )}
+                  {isExpanded(v.id) && (
+                    <tr key={`details-${v.id}`}>
+                      <td className="legacy-td" colSpan={canEdit ? 8 : 7}>
+                        <div className="card" style={{ padding: 16, background: '#fafafa' }}>
+                          <div className="legacy-section-header" style={{ marginTop: 0 }}>Details</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr auto', gap: '12px 16px', alignItems: 'start', marginBottom: 16 }}>
+                            <label style={{ fontWeight: 500 }}>Bio</label>
+                            <div className="legacy-clamp">{v.bio || <span className="legacy-muted">—</span>}</div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit bio" onClick={() => setModal({ id: v.id, field: 'bio', label: 'Bio', value: v.bio || '', multiline: true })}><EditIcon /></button>
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Intro Video</label>
+                            <div>
+                              {v.introVideo ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <FileLink url={v.introVideo} />
+                                  <VideoPreview url={v.introVideo} width={360} />
+                                </div>
+                              ) : (
+                                <span className="legacy-muted">—</span>
+                              )}
+                            </div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit intro video" onClick={() => setModal({ id: v.id, field: 'introVideo', label: 'Intro Video URL', value: v.introVideo || '' })}><EditIcon /></button>
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Intro Video CC 1</label>
+                            <div>
+                              {v.introVideoCc1 ? <FileLink url={v.introVideoCc1} /> : <span className="legacy-muted">—</span>}
+                            </div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit intro video CC 1" onClick={() => setModal({ id: v.id, field: 'introVideoCc1', label: 'Intro Video CC 1 URL', value: v.introVideoCc1 || '' })}><EditIcon /></button>
+                                  {v.introVideoCc1 && (
+                                    <button
+                                      className="legacy-icon-btn"
+                                      title="Edit CC text"
+                                      onClick={() => setModal({ id: v.id, field: 'introVideoCc1', label: 'Edit Intro Video CC 1', value: v.introVideoCc1 || '' })}
+                                    >
+                                      📝
+                                    </button>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Intro Video CC 2</label>
+                            <div>
+                              {v.introVideoCc2 ? <FileLink url={v.introVideoCc2} /> : <span className="legacy-muted">—</span>}
+                            </div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit intro video CC 2" onClick={() => setModal({ id: v.id, field: 'introVideoCc2', label: 'Intro Video CC 2 URL', value: v.introVideoCc2 || '' })}><EditIcon /></button>
+                                  {v.introVideoCc2 && (
+                                    <button
+                                      className="legacy-icon-btn"
+                                      title="Edit CC text"
+                                      onClick={() => setModal({ id: v.id, field: 'introVideoCc2', label: 'Edit Intro Video CC 2', value: v.introVideoCc2 || '' })}
+                                    >
+                                      📝
+                                    </button>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Headshot</label>
+                            <div>
+                              {v.headshot ? <FileLink url={v.headshot} /> : <span className="legacy-muted">—</span>}
+                            </div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit headshot" onClick={() => setModal({ id: v.id, field: 'headshot', label: 'Headshot URL', value: v.headshot || '' })}><EditIcon /></button>
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Headshot Alt Desc</label>
+                            <div className="legacy-clamp">{v.headshotAltDesc || <span className="legacy-muted">—</span>}</div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit headshot alt description" onClick={() => setModal({ id: v.id, field: 'headshotAltDesc', label: 'Headshot Alt Description', value: v.headshotAltDesc || '', multiline: true })}><EditIcon /></button>
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Headshot (Large)</label>
+                            <div>
+                              {v.headshotLarge ? <FileLink url={v.headshotLarge} /> : <span className="legacy-muted">—</span>}
+                            </div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit headshot (large)" onClick={() => setModal({ id: v.id, field: 'headshotLarge', label: 'Headshot Large URL', value: v.headshotLarge || '' })}><EditIcon /></button>
+                                </span>
+                              )}
+                            </div>
+
+                            <label style={{ fontWeight: 500 }}>Headshot Large Alt Desc</label>
+                            <div className="legacy-clamp">{v.headshotLargeAltDesc || <span className="legacy-muted">—</span>}</div>
+                            <div>
+                              {canEdit && (
+                                <span className="legacy-icon-group">
+                                  <button className="legacy-icon-btn edit-btn" title="Edit headshot large alt description" onClick={() => setModal({ id: v.id, field: 'headshotLargeAltDesc', label: 'Headshot Large Alt Description', value: v.headshotLargeAltDesc || '', multiline: true })}><EditIcon /></button>
+                                </span>
+                              )}
+                            </div>
+
+                            {lang2 && (
+                              <>
+                                <label style={{ fontWeight: 500 }}>{`Bio (${lang2})`}</label>
+                                <div className="legacy-clamp">{v.bioAltLang || <span className="legacy-muted">—</span>}</div>
+                                <div>
+                                  {canEdit && (
+                                    <span className="legacy-icon-group">
+                                      <button className="legacy-icon-btn edit-btn" title={`Edit bio (${lang2})`} onClick={() => setModal({ id: v.id, field: 'bioAltLang', label: `Bio (${lang2})`, value: v.bioAltLang || '', multiline: true })}><EditIcon /></button>
+                                    </span>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </td>
                     </tr>
                   )}
                 </>
@@ -137,19 +366,45 @@ export default function VoicesPage() {
         <div className="modal-backdrop" onClick={() => setAddOpen(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>Add Voice</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
               <label>Name</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               {lang2 && (<>
                 <label>{`Name (${lang2})`}</label>
-                <input value={(form as any).nameAltLang || ''} onChange={(e) => setForm({ ...(form as any), nameAltLang: e.target.value } as any)} />
+                <input value={form.nameAltLang || ''} onChange={(e) => setForm({ ...form, nameAltLang: e.target.value })} />
               </>)}
               <label>Title</label>
               <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
               {lang2 && (<>
                 <label>{`Title (${lang2})`}</label>
-                <input value={(form as any).titleAltLang || ''} onChange={(e) => setForm({ ...(form as any), titleAltLang: e.target.value } as any)} />
+                <input value={form.titleAltLang || ''} onChange={(e) => setForm({ ...form, titleAltLang: e.target.value })} />
               </>)}
+              <label>Affiliation</label>
+              <input value={form.affiliation} onChange={(e) => setForm({ ...form, affiliation: e.target.value })} />
+              {lang2 && (<>
+                <label>{`Affiliation (${lang2})`}</label>
+                <input value={form.affiliationAltLang || ''} onChange={(e) => setForm({ ...form, affiliationAltLang: e.target.value })} />
+              </>)}
+              <label>Bio</label>
+              <textarea rows={4} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+              {lang2 && (<>
+                <label>{`Bio (${lang2})`}</label>
+                <textarea rows={4} value={form.bioAltLang || ''} onChange={(e) => setForm({ ...form, bioAltLang: e.target.value })} />
+              </>)}
+              <label>Intro Video URL</label>
+              <input value={form.introVideo} onChange={(e) => setForm({ ...form, introVideo: e.target.value })} />
+              <label>Intro Video CC 1 URL</label>
+              <input value={form.introVideoCc1} onChange={(e) => setForm({ ...form, introVideoCc1: e.target.value })} />
+              <label>Intro Video CC 2 URL</label>
+              <input value={form.introVideoCc2} onChange={(e) => setForm({ ...form, introVideoCc2: e.target.value })} />
+              <label>Headshot URL</label>
+              <input value={form.headshot} onChange={(e) => setForm({ ...form, headshot: e.target.value })} />
+              <label>Headshot Alt Description</label>
+              <textarea rows={2} value={form.headshotAltDesc} onChange={(e) => setForm({ ...form, headshotAltDesc: e.target.value })} />
+              <label>Headshot Large URL</label>
+              <input value={form.headshotLarge} onChange={(e) => setForm({ ...form, headshotLarge: e.target.value })} />
+              <label>Headshot Large Alt Description</label>
+              <textarea rows={2} value={form.headshotLargeAltDesc} onChange={(e) => setForm({ ...form, headshotLargeAltDesc: e.target.value })} />
               <label>Order</label>
               <input value={form.order} onChange={(e) => setForm({ ...form, order: e.target.value })} />
             </div>
@@ -161,14 +416,42 @@ export default function VoicesPage() {
                   await ensureSignedIn();
                   await api.post(`/tapestries/${id}/voices`, {
                     name: form.name,
-                    nameAltLang: (form as any).nameAltLang || null,
+                    nameAltLang: form.nameAltLang || null,
                     title: form.title || null,
-                    titleAltLang: (form as any).titleAltLang || null,
+                    titleAltLang: form.titleAltLang || null,
+                    affiliation: form.affiliation || null,
+                    affiliationAltLang: form.affiliationAltLang || null,
+                    bio: form.bio || null,
+                    bioAltLang: form.bioAltLang || null,
+                    introVideo: form.introVideo || null,
+                    introVideoCc1: form.introVideoCc1 || null,
+                    introVideoCc2: form.introVideoCc2 || null,
+                    headshot: form.headshot || null,
+                    headshotAltDesc: form.headshotAltDesc || null,
+                    headshotLarge: form.headshotLarge || null,
+                    headshotLargeAltDesc: form.headshotLargeAltDesc || null,
                     order: form.order ? Number(form.order) : null,
                     tapestryId: Number(id)
                   });
                   setAddOpen(false);
-                  setForm({ name: "", title: "", order: "" });
+                  setForm({
+                    name: "",
+                    nameAltLang: "",
+                    title: "",
+                    titleAltLang: "",
+                    affiliation: "",
+                    affiliationAltLang: "",
+                    bio: "",
+                    bioAltLang: "",
+                    introVideo: "",
+                    introVideoCc1: "",
+                    introVideoCc2: "",
+                    headshot: "",
+                    headshotAltDesc: "",
+                    headshotLarge: "",
+                    headshotLargeAltDesc: "",
+                    order: ""
+                  });
                   load();
                 } catch (e: any) {
                   const status = e?.response?.status;
@@ -185,26 +468,43 @@ export default function VoicesPage() {
         <></>
       )}
       {modal && (
-        <div className="modal-backdrop" onClick={() => setModal(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-            <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
-            <div className="modal-actions">
-              <button className="btn" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn btn-primary" onClick={async () => {
-                if (!modal) return;
-                try {
-                  await ensureSignedIn();
-                  const isAlt = modal.label.includes('(') && modal.label.includes(')');
-                  const key = modal.field === 'name' && isAlt ? 'nameAltLang' : (modal.field === 'title' && isAlt ? 'titleAltLang' : modal.field);
-                  await api.put(`/voices/${modal.id}`, { [key]: modal.value?.trim() === '' ? null : modal.value });
-                  setModal(null);
-                  load();
-                } catch {}
-              }}>Save</button>
+        modal.label?.includes("Edit") && modal.label?.includes("CC") ? (
+          <CcEditor
+            open={true}
+            url={modal.value}
+            label={modal.label}
+            onClose={() => setModal(null)}
+            onSaved={load}
+          />
+        ) : (
+          <div className="modal-backdrop" onClick={() => setModal(null)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
+              {(modal.multiline || modal.field.toLowerCase().includes('bio') || modal.field.toLowerCase().includes('desc')) ? (
+                <textarea
+                  style={{ width: '100%', minHeight: 140 }}
+                  value={modal.value}
+                  onChange={(e) => setModal({ ...modal, value: e.target.value })}
+                />
+              ) : (
+                <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
+              )}
+              <div className="modal-actions">
+                <button className="btn" onClick={() => setModal(null)}>Cancel</button>
+                <button className="btn btn-primary" onClick={async () => {
+                  if (!modal) return;
+                  try {
+                    await ensureSignedIn();
+                    const trimmed = modal.value?.trim() ?? '';
+                    await api.put(`/voices/${modal.id}`, { [modal.field]: trimmed === '' ? null : trimmed });
+                    setModal(null);
+                    load();
+                  } catch {}
+                }}>Save</button>
+              </div>
             </div>
           </div>
-        </div>
+        )
       )}
     </main>
   );

@@ -18,11 +18,16 @@ export default function TapestryScenesTab() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ sequence: "", title: "" });
   const [addOpen, setAddOpen] = useState(false);
-  const [modal, setModal] = useState<{ id: number; field: 'sequence' | 'title' | 'description' | 'titleAltLang' | 'descriptionAltLang'; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ id: number; field: 'sequence' | 'title' | 'description' | 'titleAltLang' | 'descriptionAltLang' | 'setId' | 'skyId'; label: string; value: string } | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const formErrors = useMemo(() => ({ sequence: validateSeq(form.sequence) }), [form.sequence]);
   const [lang2, setLang2] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [isThreeJs, setIsThreeJs] = useState(false);
+  const [setLookup, setSetLookup] = useState<Record<string, any>>({});
+  const [setOptions, setSetOptions] = useState<any[]>([]);
+  const [skyOptions, setSkyOptions] = useState<Array<{ id: number; label: string }>>([]);
+  const [skyLookup, setSkyLookup] = useState<Record<string, { id: number; label: string }>>({});
   const isExpanded = (id: number) => !!expanded[id];
   const toggleExpand = (id: number) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
@@ -45,6 +50,45 @@ export default function TapestryScenesTab() {
       ]);
       setMe(meRes.data || null);
       setItems(Array.isArray(res.data?.scenes) ? res.data.scenes : []);
+      const threeFlag = Boolean(res.data?.isThreeJS);
+      setIsThreeJs(threeFlag);
+      if (threeFlag && id) {
+        try {
+          const [setsRes, skiesRes] = await Promise.all([
+            api.get(`/tapestries/${id}/sets`).catch(() => ({ data: [] })),
+            api.get(`/tapestries/${id}/skies`).catch(() => ({ data: [] })),
+          ]);
+
+          const setRows = Array.isArray(setsRes.data) ? setsRes.data : [];
+          const setMap: Record<string, any> = {};
+          for (const row of setRows) {
+            if (row?.id != null) setMap[String(row.id)] = row;
+          }
+          setSetLookup(setMap);
+          setSetOptions(setRows);
+
+          const skyRows = (Array.isArray(skiesRes.data) ? skiesRes.data : []).map((row: any) => ({
+            id: Number(row?.id ?? row?.sky_id ?? 0),
+            label: (row?.label ?? '').toString().trim() || `Sky #${row?.id ?? row?.sky_id ?? ''}`,
+          })).filter((row) => Number.isFinite(row.id) && row.id > 0);
+          const skyMap: Record<string, { id: number; label: string }> = {};
+          for (const row of skyRows) {
+            skyMap[String(row.id)] = row;
+          }
+          setSkyOptions(skyRows);
+          setSkyLookup(skyMap);
+        } catch {
+          setSetLookup({});
+          setSetOptions([]);
+          setSkyOptions([]);
+          setSkyLookup({});
+        }
+      } else {
+        setSetLookup({});
+        setSetOptions([]);
+        setSkyOptions([]);
+        setSkyLookup({});
+      }
       const a2 = (res.data?.audioLanguage2 as string | undefined) || "";
       const l2 = await resolveLanguageName(a2);
       setLang2(l2 && l2.trim() !== "" ? l2 : null);
@@ -81,6 +125,8 @@ export default function TapestryScenesTab() {
                 <th className="legacy-th" style={{ width: '40px' }}></th>
                 <th className="legacy-th" style={{ width: '60px' }}>ID</th>
                 <th className="legacy-th" style={{ width: '100px' }}>Sequence</th>
+                {isThreeJs && <th className="legacy-th" style={{ width: '140px' }}>Set</th>}
+                {isThreeJs && <th className="legacy-th" style={{ width: '120px' }}>Sky</th>}
                 <th className="legacy-th" style={{ width: '25%' }}>Title</th>
                 <th className="legacy-th" style={{ width: 'auto' }}>Description</th>
                 <th className="legacy-th" style={{ width: '200px' }}>Narration</th>
@@ -88,7 +134,13 @@ export default function TapestryScenesTab() {
               </tr>
             </thead>
             <tbody>
-              {items.map((s) => (
+              {items.map((s) => {
+                const setId = (s as any).setId;
+                const skyId = (s as any).skyId;
+                const setInfo = setId != null ? setLookup[String(setId)] : undefined;
+                const skyInfo = skyId != null ? skyLookup[String(skyId)] : undefined;
+                const skyLabel = skyId != null ? (skyInfo?.label || (s as any).skyDescription || `Sky #${skyId}`) : null;
+                return (
                 <>
                   <tr key={s.id}>
                     <td className="legacy-td" style={{ textAlign: 'center' }}>
@@ -101,40 +153,132 @@ export default function TapestryScenesTab() {
                       <span>{s.sequence || ''}</span>
                       {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit sequence" onClick={() => setModal({ id: s.id, field: 'sequence', label: 'Sequence', value: s.sequence || '' })}><EditIcon /></button>)}
                     </td>
+                    {isThreeJs && (
+                      <>
+                        <td className="legacy-td">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {setId != null ? (
+                                <>
+                                  <span>{`Set #${setId}`}</span>
+                                  {setInfo?.type && <span className="legacy-muted" style={{ fontSize: 12 }}>{setInfo.type}</span>}
+                                </>
+                              ) : (
+                                <span className="legacy-muted">—</span>
+                              )}
+                            </div>
+                            {canEdit && (
+                              <span className="legacy-icon-group">
+                                <button
+                                  className="legacy-icon-btn edit-btn"
+                                  title="Edit set"
+                                  onClick={() => setModal({ id: s.id, field: 'setId', label: 'Set', value: setId != null ? String(setId) : '' })}
+                                >
+                                  <EditIcon />
+                                </button>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="legacy-td">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div>
+                              {skyId != null ? (
+                                (() => {
+                                  const labelText = skyLabel || `Sky #${skyId}`;
+                                  const showIdLine = !labelText.includes(`#${skyId}`);
+                                  return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                      <span>{labelText}</span>
+                                      {showIdLine && (
+                                        <span className="legacy-muted" style={{ fontSize: 12 }}>{`ID: ${skyId}`}</span>
+                                      )}
+                                    </div>
+                                  );
+                                })()
+                              ) : (
+                                <span className="legacy-muted">—</span>
+                              )}
+                            </div>
+                            {canEdit && (
+                              <span className="legacy-icon-group">
+                                <button
+                                  className="legacy-icon-btn edit-btn"
+                                  title="Edit sky"
+                                  onClick={() => setModal({ id: s.id, field: 'skyId', label: 'Sky', value: skyId != null ? String(skyId) : '' })}
+                                >
+                                  <EditIcon />
+                                </button>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </>
+                    )}
                     <td className="legacy-td">
-                      <span className="legacy-clamp">{s.title || ''}</span>
-                      {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit title" onClick={() => setModal({ id: s.id, field: 'title', label: 'Title', value: s.title || '' })}><EditIcon /></button>)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="legacy-clamp">{s.title || ''}</span>
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <button className="legacy-icon-btn edit-btn" title="Edit title" onClick={() => setModal({ id: s.id, field: 'title', label: 'Title', value: s.title || '' })}><EditIcon /></button>
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="legacy-td col-expand">
-                      <span className="legacy-clamp">{s.description || ''}</span>
-                      {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit description" onClick={() => setModal({ id: s.id, field: 'description', label: 'Description', value: s.description || '' })}><EditIcon /></button>)}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span className="legacy-clamp">{s.description || ''}</span>
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <button className="legacy-icon-btn edit-btn" title="Edit description" onClick={() => setModal({ id: s.id, field: 'description', label: 'Description', value: s.description || '' })}><EditIcon /></button>
+                          </span>
+                        )}
+                      </div>
                     </td>
                   <td className="legacy-td">
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', rowGap: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span>Audio 1:</span>
                         <FileLink url={(s as any).audioNarration1} />
-                        <AudioPreview url={(s as any).audioNarration1} />
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit audio narration 1" onClick={() => setModal({ id: s.id, field: 'audioNarration1' as any, label: 'Audio Narration 1', value: (s as any).audioNarration1 || '' })}><EditIcon /></button>)}
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <AudioPreview url={(s as any).audioNarration1} />
+                            <button className="legacy-icon-btn edit-btn" title="Edit audio narration 1" onClick={() => setModal({ id: s.id, field: 'audioNarration1' as any, label: 'Audio Narration 1', value: (s as any).audioNarration1 || '' })}><EditIcon /></button>
+                          </span>
+                        )}
+                        {!canEdit && <AudioPreview url={(s as any).audioNarration1} />}
                       </div>
                       {lang2 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>Audio 2:</span>
                           <FileLink url={(s as any).audioNarration2} />
-                          <AudioPreview url={(s as any).audioNarration2} />
-                          {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit audio narration 2" onClick={() => setModal({ id: s.id, field: 'audioNarration2' as any, label: 'Audio Narration 2', value: (s as any).audioNarration2 || '' })}><EditIcon /></button>)}
+                          {canEdit && (
+                            <span className="legacy-icon-group">
+                              <AudioPreview url={(s as any).audioNarration2} />
+                              <button className="legacy-icon-btn edit-btn" title="Edit audio narration 2" onClick={() => setModal({ id: s.id, field: 'audioNarration2' as any, label: 'Audio Narration 2', value: (s as any).audioNarration2 || '' })}><EditIcon /></button>
+                            </span>
+                          )}
+                          {!canEdit && <AudioPreview url={(s as any).audioNarration2} />}
                         </div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span>CC 1:</span> <FileLink url={(s as any).narrationCc1} />
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit CC 1 URL" onClick={() => setModal({ id: s.id, field: 'narrationCc1' as any, label: 'Narration CC 1', value: (s as any).narrationCc1 || '' })}><EditIcon /></button>)}
-                        {canEdit && (s as any).narrationCc1 && (<button className="legacy-icon-btn" title="Edit CC 1 Text" onClick={() => setModal({ id: s.id, field: 'narrationCc1' as any, label: 'Edit Scene CC 1', value: (s as any).narrationCc1 || '' })}>📝</button>)}
+                        {canEdit && (
+                          <span className="legacy-icon-group">
+                            <button className="legacy-icon-btn edit-btn" title="Edit CC 1 URL" onClick={() => setModal({ id: s.id, field: 'narrationCc1' as any, label: 'Narration CC 1', value: (s as any).narrationCc1 || '' })}><EditIcon /></button>
+                            {(s as any).narrationCc1 && (<button className="legacy-icon-btn" title="Edit CC 1 Text" onClick={() => setModal({ id: s.id, field: 'narrationCc1' as any, label: 'Edit Scene CC 1', value: (s as any).narrationCc1 || '' })}>📝</button>)}
+                          </span>
+                        )}
                       </div>
                       {lang2 && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span>CC 2:</span> <FileLink url={(s as any).narrationCc2} />
-                          {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit CC 2 URL" onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Narration CC 2', value: (s as any).narrationCc2 || '' })}><EditIcon /></button>)}
-                          {canEdit && (s as any).narrationCc2 && (<button className="legacy-icon-btn" title="Edit CC 2 Text" onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Edit Scene CC 2', value: (s as any).narrationCc2 || '' })}>📝</button>)}
+                          {canEdit && (
+                            <span className="legacy-icon-group">
+                              <button className="legacy-icon-btn edit-btn" title="Edit CC 2 URL" onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Narration CC 2', value: (s as any).narrationCc2 || '' })}><EditIcon /></button>
+                              {(s as any).narrationCc2 && (<button className="legacy-icon-btn" title="Edit CC 2 Text" onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Edit Scene CC 2', value: (s as any).narrationCc2 || '' })}>📝</button>)}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -145,7 +289,7 @@ export default function TapestryScenesTab() {
                   </tr>
                 {isExpanded(s.id) && (
                   <tr key={`details-${s.id}`}>
-                    <td className="legacy-td" colSpan={7}>
+                    <td className="legacy-td" colSpan={isThreeJs ? 9 : 7}>
                       <div className="card" style={{ padding: 12, background: '#fafafa' }}>
                         <div className="legacy-section-header" style={{ marginTop: 0 }}>Details</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr auto', rowGap: 8, columnGap: 12 }}>
@@ -209,6 +353,12 @@ export default function TapestryScenesTab() {
                     <td className="legacy-td" style={{ width: '40px' }} />
                     <td className="legacy-td col-id legacy-muted" title={lang2}>{lang2 || ''}</td>
                     <td className="legacy-td legacy-muted" style={{ fontStyle: 'italic' }}>—</td>
+                    {isThreeJs && (
+                      <>
+                        <td className="legacy-td legacy-muted">—</td>
+                        <td className="legacy-td legacy-muted">—</td>
+                      </>
+                    )}
                     <td className="legacy-td">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <span className="legacy-muted" style={{ fontSize: 12 }}>{`Title (${lang2})`}</span>
@@ -243,7 +393,8 @@ export default function TapestryScenesTab() {
                   </tr>
                 )}
                 </>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -302,7 +453,41 @@ export default function TapestryScenesTab() {
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-            <input style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+            {modal.field === 'setId' ? (
+              <select
+                style={{ width: '100%' }}
+                value={modal.value}
+                onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }}
+              >
+                <option value="">No set</option>
+                {setOptions
+                  .filter((opt) => opt?.id != null)
+                  .map((opt) => (
+                    <option key={opt.id} value={String(opt.id)}>
+                      {`Set #${opt.id}${opt?.type ? ` – ${opt.type}` : ''}`}
+                    </option>
+                  ))}
+              </select>
+            ) : modal.field === 'skyId' ? (
+              <select
+                style={{ width: '100%' }}
+                value={modal.value}
+                onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }}
+              >
+                <option value="">No sky</option>
+                    {skyOptions.map((sky) => {
+                      const optionLabel = sky.label || `Sky #${sky.id}`;
+                      const suffix = optionLabel.includes(`#${sky.id}`) ? "" : ` (ID ${sky.id})`;
+                      return (
+                        <option key={sky.id} value={String(sky.id)}>
+                          {optionLabel}{suffix}
+                        </option>
+                      );
+                    })}
+              </select>
+            ) : (
+              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+            )}
             {modalError && <div style={{ color: 'crimson', marginTop: 8 }}>{modalError}</div>}
             <div className="modal-actions">
               <button className="btn" onClick={() => setModal(null)}>Cancel</button>
@@ -310,7 +495,7 @@ export default function TapestryScenesTab() {
                 if (!modal) return;
                 try {
                   await ensureSignedIn();
-                  const numericKeys = new Set(['cameraFov']);
+                  const numericKeys = new Set(['cameraFov', 'interactiveId', 'setId', 'skyId']);
                   const boolKeys = new Set(['desaturate','instantMove','useAmbientAudioAlt']);
                   const payload: any = {};
                   if (numericKeys.has(modal.field as any)) payload[modal.field] = modal.value.trim() === '' ? null : Number(modal.value);

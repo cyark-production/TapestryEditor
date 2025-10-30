@@ -22,6 +22,14 @@ type Marker = {
   interactiveHighlightId?: number | null;
 };
 
+type MarkerModalState = {
+  id?: number;
+  field: keyof Marker;
+  label: string;
+  value?: string;
+  fields?: Record<string, string>;
+};
+
 export default function MarkersPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
@@ -30,7 +38,7 @@ export default function MarkersPage() {
   const [error, setError] = useState<string | null>(null);
   const [isThreeJS, setIsThreeJS] = useState<boolean>(false);
   const [me, setMe] = useState<any | null>(null);
-  const [modal, setModal] = useState<{ id?: number; field: keyof Marker; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<MarkerModalState | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<any>({ sceneId: "", overviewId: "", markerLabel: "", lat: "", lon: "", markerColor: "", fontColor: "", fontSize: "", startTime: "", endTime: "", interactiveId: "", interactiveHighlightId: "" });
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
@@ -74,6 +82,16 @@ export default function MarkersPage() {
 
   useEffect(() => { load(); }, [id]);
   const canEdit = (me?.roles || []).some((r: string) => r === 'Admin' || r === 'Editor');
+
+  const updateModalField = (key: string, nextValue: string) => {
+    setModal((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        fields: { ...(prev.fields || {}), [key]: nextValue },
+      };
+    });
+  };
 
   const grouped = useMemo(() => {
     const byScene = new Map<string, Marker[]>();
@@ -146,11 +164,43 @@ export default function MarkersPage() {
                       </td>
                       <td className="legacy-td">
                         <span>{m.lat ?? '—'}, {m.lon ?? '—'}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit lat/lon" onClick={() => setModal({ id: m.id, field: 'lat', label: 'Latitude,Longitude', value: `${m.lat ?? ''},${m.lon ?? ''}` })}><EditIcon /></button>)}
+                        {canEdit && (
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title="Edit lat/lon"
+                            onClick={() => setModal({
+                              id: m.id,
+                              field: 'lat',
+                              label: 'Edit Latitude & Longitude',
+                              fields: {
+                                lat: m.lat != null ? String(m.lat) : '',
+                                lon: m.lon != null ? String(m.lon) : '',
+                              },
+                            })}
+                          >
+                            <EditIcon />
+                          </button>
+                        )}
                       </td>
                       <td className="legacy-td">
                         <span>{m.markerColor || '—'} / {m.fontColor || '—'}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit colors" onClick={() => setModal({ id: m.id, field: 'markerColor', label: 'Marker Color / Font Color', value: `${m.markerColor || ''}/${m.fontColor || ''}` })}><EditIcon /></button>)}
+                        {canEdit && (
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title="Edit colors"
+                            onClick={() => setModal({
+                              id: m.id,
+                              field: 'markerColor',
+                              label: 'Edit Marker & Font Colors',
+                              fields: {
+                                markerColor: m.markerColor || '',
+                                fontColor: m.fontColor || '',
+                              },
+                            })}
+                          >
+                            <EditIcon />
+                          </button>
+                        )}
                       </td>
                       <td className="legacy-td">
                         <span>{m.fontSize || '—'}</span>
@@ -158,27 +208,65 @@ export default function MarkersPage() {
                       </td>
                       <td className="legacy-td">
                         <span>{m.startTime ?? '—'} / {m.endTime ?? '—'}</span>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit times" onClick={() => setModal({ id: m.id, field: 'startTime', label: 'Start / End', value: `${m.startTime ?? ''}/${m.endTime ?? ''}` })}><EditIcon /></button>)}
+                        {canEdit && (
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title="Edit times"
+                            onClick={() => setModal({
+                              id: m.id,
+                              field: 'startTime',
+                              label: 'Edit Start & End Times',
+                              fields: {
+                                startTime: m.startTime != null ? String(m.startTime) : '',
+                                endTime: m.endTime != null ? String(m.endTime) : '',
+                              },
+                            })}
+                          >
+                            <EditIcon />
+                          </button>
+                        )}
                       </td>
                       <td className="legacy-td">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {(() => {
-                            const info = m.interactiveId != null ? interactiveLookup.get(m.interactiveId) : null;
-                            if (info) {
-                              return <span>{`Interactive #${info.id}${info.sceneSequence ? ` – Scene ${info.sceneSequence}` : ''}`}</span>;
+                            if (m.interactiveId == null) {
+                              return <span>Interactive: <span className="legacy-muted">—</span></span>;
                             }
-                            return <span>Interactive: <span className="legacy-muted">—</span></span>;
+                            const info = interactiveLookup.get(m.interactiveId);
+                            const parts = [`Interactive #${m.interactiveId}`];
+                            if (info?.sceneSequence) parts.push(`Scene ${info.sceneSequence}`);
+                            const interactiveLabel = (info as any)?.title || (info as any)?.name || (info as any)?.label;
+                            if (interactiveLabel) parts.push(interactiveLabel);
+                            return <span>{parts.join(' – ')}</span>;
                           })()}
                           {(() => {
-                            const highlight = m.interactiveHighlightId != null ? highlightLookup.get(m.interactiveHighlightId) : null;
-                            if (!highlight) return null;
-                            const parts = [`Highlight #${highlight.id}`];
-                            if (highlight.sceneSequence) parts.push(`Scene ${highlight.sceneSequence}`);
-                            if (highlight.popupTitle) parts.push(highlight.popupTitle);
+                            if (m.interactiveHighlightId == null) {
+                              return <span className="legacy-muted" style={{ fontSize: 12 }}>Highlight: —</span>;
+                            }
+                            const highlight = highlightLookup.get(m.interactiveHighlightId);
+                            const parts = [`Highlight #${m.interactiveHighlightId}`];
+                            if (highlight?.sceneSequence) parts.push(`Scene ${highlight.sceneSequence}`);
+                            if (highlight?.popupTitle) parts.push(highlight.popupTitle);
                             return <span className="legacy-muted" style={{ fontSize: 12 }}>{parts.join(' – ')}</span>;
                           })()}
                         </div>
-                        {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit interactive" onClick={() => setModal({ id: m.id, field: 'interactiveId', label: 'Interactive / Highlight', value: `${m.interactiveId ?? ''}/${m.interactiveHighlightId ?? ''}` })}><EditIcon /></button>)}
+                        {canEdit && (
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title="Edit interactive"
+                            onClick={() => setModal({
+                              id: m.id,
+                              field: 'interactiveId',
+                              label: 'Edit Interactive & Highlight',
+                              fields: {
+                                interactiveId: m.interactiveId != null ? String(m.interactiveId) : '',
+                                interactiveHighlightId: m.interactiveHighlightId != null ? String(m.interactiveHighlightId) : '',
+                              },
+                            })}
+                          >
+                            <EditIcon />
+                          </button>
+                        )}
                       </td>
                       {canEdit && (
                         <td className="legacy-td col-actions legacy-row-actions">
@@ -286,68 +374,161 @@ export default function MarkersPage() {
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-            {modal.label === 'Interactive / Highlight' ? (() => {
-              const [interactivePart = '', highlightPart = ''] = (modal.value || '').split('/');
-              const highlightOptions = highlights.filter((h) => !interactivePart || String(h.interactiveId ?? '') === interactivePart);
+            {(() => {
+              if (modal.field === 'lat') {
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
+                    <label>Latitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={modal.fields?.lat ?? ''}
+                      onChange={(e) => updateModalField('lat', e.target.value)}
+                    />
+                    <label>Longitude</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={modal.fields?.lon ?? ''}
+                      onChange={(e) => updateModalField('lon', e.target.value)}
+                    />
+                  </div>
+                );
+              }
+
+              if (modal.field === 'markerColor') {
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
+                    <label>Marker Color</label>
+                    <input
+                      value={modal.fields?.markerColor ?? ''}
+                      onChange={(e) => updateModalField('markerColor', e.target.value)}
+                    />
+                    <label>Font Color</label>
+                    <input
+                      value={modal.fields?.fontColor ?? ''}
+                      onChange={(e) => updateModalField('fontColor', e.target.value)}
+                    />
+                  </div>
+                );
+              }
+
+              if (modal.field === 'startTime') {
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
+                    <label>Start Time</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={modal.fields?.startTime ?? ''}
+                      onChange={(e) => updateModalField('startTime', e.target.value)}
+                    />
+                    <label>End Time</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={modal.fields?.endTime ?? ''}
+                      onChange={(e) => updateModalField('endTime', e.target.value)}
+                    />
+                  </div>
+                );
+              }
+
+              if (modal.field === 'interactiveId') {
+                const interactiveValue = modal.fields?.interactiveId ?? '';
+                const highlightValue = modal.fields?.interactiveHighlightId ?? '';
+                const availableHighlights = interactiveValue
+                  ? highlights.filter((h) => String(h.interactiveId ?? '') === interactiveValue)
+                  : highlights;
+                return (
+                  <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
+                    <label>Interactive</label>
+                    <select
+                      value={interactiveValue}
+                      onChange={(e) => {
+                        const nextInteractive = e.target.value;
+                        setModal((prev) => {
+                          if (!prev) return prev;
+                          return {
+                            ...prev,
+                            fields: {
+                              ...(prev.fields || {}),
+                              interactiveId: nextInteractive,
+                              interactiveHighlightId: '',
+                            },
+                          };
+                        });
+                      }}
+                    >
+                      <option value="">None</option>
+                      {interactives.map((i) => (
+                        <option key={i.id} value={String(i.id)}>
+                          {`Interactive #${i.id}`}{i.sceneSequence ? ` – Scene ${i.sceneSequence}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <label>Highlight</label>
+                    <select
+                      value={highlightValue}
+                      onChange={(e) => updateModalField('interactiveHighlightId', e.target.value)}
+                    >
+                      <option value="">None</option>
+                      {availableHighlights.map((h) => (
+                        <option key={h.id} value={String(h.id)}>
+                          {`Highlight #${h.id}`}
+                          {h.sceneSequence ? ` – Scene ${h.sceneSequence}` : ''}
+                          {h.popupTitle ? ` – ${h.popupTitle}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+
               return (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
-                  <select
-                    value={interactivePart}
-                    onChange={(e) => {
-                      const nextInteractive = e.target.value;
-                      setModal({ ...modal, value: `${nextInteractive ?? ''}/` });
-                    }}
-                  >
-                    <option value="">None</option>
-                    {interactives.map((i) => (
-                      <option key={i.id} value={String(i.id)}>
-                        {`Interactive #${i.id}`}{i.sceneSequence ? ` – Scene ${i.sceneSequence}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={highlightPart}
-                    onChange={(e) => {
-                      const nextHighlight = e.target.value;
-                      setModal({ ...modal, value: `${interactivePart ?? ''}/${nextHighlight}` });
-                    }}
-                  >
-                    <option value="">None</option>
-                    {highlightOptions.map((h) => (
-                      <option key={h.id} value={String(h.id)}>
-                        {`Highlight #${h.id}`}
-                        {h.sceneSequence ? ` – Scene ${h.sceneSequence}` : ''}
-                        {h.popupTitle ? ` – ${h.popupTitle}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <input
+                  style={{ width: '100%' }}
+                  value={modal.value ?? ''}
+                  onChange={(e) => setModal((prev) => (prev ? { ...prev, value: e.target.value } : prev))}
+                />
               );
-            })()
-            : (
-              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
-            )}
+            })()}
             <div className="modal-actions">
               <button className="btn" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={async () => {
                 if (!modal?.id) return;
                 try {
                   await ensureSignedIn();
-                  const label = modal.label;
-                  const val = modal.value?.trim();
-                  if (label === 'Latitude,Longitude') {
-                    const [latStr, lonStr] = (val || '').split(',');
-                    await api.put(`/markers/${modal.id}`, { lat: latStr ? Number(latStr) : null, lon: lonStr ? Number(lonStr) : null });
-                  } else if (label === 'Marker Color / Font Color') {
-                    const [m, f] = (val || '').split('/');
-                    await api.put(`/markers/${modal.id}`, { markerColor: (m || '').trim() || null, fontColor: (f || '').trim() || null });
-                  } else if (label === 'Start / End') {
-                    const [s, e] = (val || '').split('/');
-                    await api.put(`/markers/${modal.id}`, { startTime: s ? Number(s) : null, endTime: e ? Number(e) : null });
-                  } else if (label === 'Interactive / Highlight') {
-                    const [i, h] = (val || '').split('/');
-                    await api.put(`/markers/${modal.id}`, { interactiveId: i ? Number(i) : null, interactiveHighlightId: h ? Number(h) : null });
+                  if (modal.field === 'lat') {
+                    const latValue = modal.fields?.lat ?? '';
+                    const lonValue = modal.fields?.lon ?? '';
+                    await api.put(`/markers/${modal.id}`, {
+                      lat: latValue.trim() === '' ? null : Number(latValue),
+                      lon: lonValue.trim() === '' ? null : Number(lonValue),
+                    });
+                  } else if (modal.field === 'markerColor') {
+                    const markerColor = (modal.fields?.markerColor ?? '').trim();
+                    const fontColor = (modal.fields?.fontColor ?? '').trim();
+                    await api.put(`/markers/${modal.id}`, {
+                      markerColor: markerColor || null,
+                      fontColor: fontColor || null,
+                    });
+                  } else if (modal.field === 'startTime') {
+                    const startValue = modal.fields?.startTime ?? '';
+                    const endValue = modal.fields?.endTime ?? '';
+                    await api.put(`/markers/${modal.id}`, {
+                      startTime: startValue.trim() === '' ? null : Number(startValue),
+                      endTime: endValue.trim() === '' ? null : Number(endValue),
+                    });
+                  } else if (modal.field === 'interactiveId') {
+                    const interactiveValue = (modal.fields?.interactiveId ?? '').trim();
+                    const highlightValue = (modal.fields?.interactiveHighlightId ?? '').trim();
+                    await api.put(`/markers/${modal.id}`, {
+                      interactiveId: interactiveValue === '' ? null : Number(interactiveValue),
+                      interactiveHighlightId: highlightValue === '' ? null : Number(highlightValue),
+                    });
                   } else {
+                    const val = (modal.value ?? '').trim();
                     await api.put(`/markers/${modal.id}`, { [modal.field]: val === '' ? null : val });
                   }
                   setModal(null); load();

@@ -72,22 +72,34 @@ export default function VoiceClipsPage() {
             <td className="legacy-td">{c.voice?.name || ''}</td>
             <td className="legacy-td">{c.voice?.title || ''}</td>
             <td className="legacy-td col-expand">
-              <span className="legacy-clamp">{c.voiceBubbleText || ''}</span>
-              {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit bubble" onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: 'Voice Bubble Text', value: c.voiceBubbleText || '' })}><EditIcon /></button>)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="legacy-clamp">{c.voiceBubbleText || ''}</span>
+                {canEdit && (
+                  <span className="legacy-icon-group">
+                    <button className="legacy-icon-btn edit-btn" title="Edit bubble" onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: 'Voice Bubble Text', value: c.voiceBubbleText || '' })}><EditIcon /></button>
+                  </span>
+                )}
+              </div>
             </td>
             <td className="legacy-td">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <FileLink url={c.voiceVideo} />
                 <VideoPreview url={c.voiceVideo} width={560} />
               </div>
-              {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit video" onClick={() => setModal({ id: c.id, field: 'voiceVideo', label: 'Voice Video URL', value: c.voiceVideo || '' })}><EditIcon /></button>)}
+              {canEdit && (
+                <span className="legacy-icon-group" style={{ marginLeft: 6 }}>
+                  <button className="legacy-icon-btn edit-btn" title="Edit video" onClick={() => setModal({ id: c.id, field: 'voiceVideo', label: 'Voice Video URL', value: c.voiceVideo || '' })}><EditIcon /></button>
+                </span>
+              )}
             </td>
             <td className="legacy-td">
               <FileLink url={c.voiceVideoCc1} />
-              <div style={{ display: 'flex', gap: 6 }}>
-                {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit CC URL (${lang1 || 'English'})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc1', label: `Voice Video CC ${lang1 || 'English'}`, value: c.voiceVideoCc1 || '' })}><EditIcon /></button>)}
-                {canEdit && c.voiceVideoCc1 && (<button className="legacy-icon-btn" title={`Edit CC Text (${lang1 || 'English'})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc1', label: `Edit Voice CC (${lang1 || 'English'})`, value: c.voiceVideoCc1 || '' })}>📝</button>)}
-              </div>
+              {canEdit && (
+                <span className="legacy-icon-group" style={{ marginLeft: 6 }}>
+                  <button className="legacy-icon-btn edit-btn" title={`Edit CC URL (${lang1 || 'English'})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc1', label: `Voice Video CC ${lang1 || 'English'}`, value: c.voiceVideoCc1 || '' })}><EditIcon /></button>
+                  {c.voiceVideoCc1 && (<button className="legacy-icon-btn" title={`Edit CC Text (${lang1 || 'English'})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc1', label: `Edit Voice CC (${lang1 || 'English'})`, value: c.voiceVideoCc1 || '' })}>📝</button>)}
+                </span>
+              )}
             </td>
             <td className="legacy-td col-actions legacy-row-actions">
               {canEdit && (<button className="legacy-icon-btn delete-btn" title="Delete" onClick={() => setConfirm({ open: true, id: c.id })}><TrashIcon /></button>)}
@@ -102,16 +114,24 @@ export default function VoiceClipsPage() {
               <td className="legacy-td legacy-muted"></td>
               <td className="legacy-td legacy-muted"></td>
               <td className="legacy-td col-expand">
-                <span className="legacy-clamp">{c.voiceBubbleTextAlt || ''}</span>
-                {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit bubble (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: `Voice Bubble Text (${lang2})`, value: c.voiceBubbleTextAlt || '' })}><EditIcon /></button>)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span className="legacy-clamp">{c.voiceBubbleTextAlt || ''}</span>
+                  {canEdit && (
+                    <span className="legacy-icon-group">
+                      <button className="legacy-icon-btn edit-btn" title={`Edit bubble (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: `Voice Bubble Text (${lang2})`, value: c.voiceBubbleTextAlt || '' })}><EditIcon /></button>
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="legacy-td"></td>
               <td className="legacy-td">
                 <FileLink url={c.voiceVideoCc2} />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit CC URL (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Voice Video CC ${lang2}`, value: c.voiceVideoCc2 || '' })}><EditIcon /></button>)}
-                  {canEdit && c.voiceVideoCc2 && (<button className="legacy-icon-btn" title={`Edit CC Text (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Edit Voice CC (${lang2})`, value: c.voiceVideoCc2 || '' })}>📝</button>)}
-                </div>
+                {canEdit && (
+                  <span className="legacy-icon-group" style={{ marginLeft: 6 }}>
+                    <button className="legacy-icon-btn edit-btn" title={`Edit CC URL (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Voice Video CC ${lang2}`, value: c.voiceVideoCc2 || '' })}><EditIcon /></button>
+                    {c.voiceVideoCc2 && (<button className="legacy-icon-btn" title={`Edit CC Text (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Edit Voice CC (${lang2})`, value: c.voiceVideoCc2 || '' })}>📝</button>)}
+                  </span>
+                )}
               </td>
               <td className="legacy-td col-actions"></td>
             </tr>

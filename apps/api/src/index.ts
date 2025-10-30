@@ -293,8 +293,13 @@ app.get("/tapestries/:id", authGuard(["Admin", "Editor", "Viewer"]), async (req,
         s.camera_fov AS cameraFov,
         s.desaturate AS desaturate,
         s.instant_move AS instantMove,
-        s.interactive_id AS interactiveId
+        s.interactive_id AS interactiveId,
+        tjs.set_id AS setId,
+        tjs.sky_id AS skyId,
+        sky.sky_description AS skyDescription
       FROM scenes s
+      LEFT JOIN threejs_scenes tjs ON tjs.scene_id = s.scene_id
+      LEFT JOIN threejs_sky sky ON sky.sky_id = tjs.sky_id
       WHERE s.tapestry_id = ${id}
       ORDER BY s.scene_sequence ASC, s.scene_id ASC`
   );
@@ -358,6 +363,8 @@ const sceneUpdateSchema = z.object({
   desaturate: z.union([z.number().int(), z.boolean()]).optional().nullable(),
   instantMove: z.union([z.number().int(), z.boolean()]).optional().nullable(),
   interactiveId: z.number().int().optional().nullable(),
+  setId: z.number().int().optional().nullable(),
+  skyId: z.number().int().optional().nullable(),
 }).partial();
 
 app.post("/tapestries/:id/scenes", authGuard(["Admin", "Editor"]), async (req, res) => {
@@ -410,9 +417,59 @@ app.put("/scenes/:sceneId", authGuard(["Admin", "Editor"]), async (req, res) => 
     if (k === 'useAmbientAudioAlt' || k === 'desaturate' || k === 'instantMove') return v == null ? null : (v ? 1 : 0);
     return v;
   };
-  const sets = entries.map(([k, v]) => `${map[k]} = ${v == null ? 'NULL' : '?'}`).join(', ');
-  const values = entries.filter(([, v]) => v != null).map(([k, v]) => normalize(k, v) as any);
-  await (db as any).$executeRawUnsafe(`UPDATE scenes SET ${sets} WHERE scene_id = ${sceneId}`, ...values as any);
+  const sceneEntries = entries.filter(([k]) => k !== 'setId' && k !== 'skyId');
+  if (sceneEntries.length) {
+    const sets = sceneEntries.map(([k, v]) => `${map[k]} = ${v == null ? 'NULL' : '?'}`).join(', ');
+    const values = sceneEntries.filter(([, v]) => v != null).map(([k, v]) => normalize(k, v) as any);
+    await (db as any).$executeRawUnsafe(`UPDATE scenes SET ${sets} WHERE scene_id = ${sceneId}`, ...values as any);
+  }
+
+  const hasSet = Object.prototype.hasOwnProperty.call(parsed.data, 'setId');
+  const hasSky = Object.prototype.hasOwnProperty.call(parsed.data, 'skyId');
+  if (hasSet || hasSky) {
+    const setValue = hasSet ? (parsed.data.setId ?? null) : undefined;
+    const skyValue = hasSky ? (parsed.data.skyId ?? null) : undefined;
+    const existingRow: any = await (db as any).$queryRawUnsafe(`SELECT scene_id FROM threejs_scenes WHERE scene_id = ${sceneId} LIMIT 1`);
+    const existing = Array.isArray(existingRow) ? existingRow[0] : existingRow;
+
+    if ((setValue ?? null) === null && (skyValue ?? null) === null) {
+      if (existing) {
+        await (db as any).$executeRawUnsafe(`DELETE FROM threejs_scenes WHERE scene_id = ${sceneId}`);
+      }
+    } else if (existing) {
+      const updates: string[] = [];
+      const values: any[] = [];
+      if (hasSet) {
+        updates.push(`set_id = ${setValue == null ? 'NULL' : '?'}`);
+        if (setValue != null) values.push(setValue);
+      }
+      if (hasSky) {
+        updates.push(`sky_id = ${skyValue == null ? 'NULL' : '?'}`);
+        if (skyValue != null) values.push(skyValue);
+      }
+      if (updates.length) {
+        await (db as any).$executeRawUnsafe(`UPDATE threejs_scenes SET ${updates.join(', ')} WHERE scene_id = ${sceneId}`, ...values as any);
+      }
+    } else {
+      const cols: string[] = ['scene_id'];
+      const placeholders: string[] = ['?'];
+      const values: any[] = [sceneId];
+      if (setValue != null) {
+        cols.push('set_id');
+        placeholders.push('?');
+        values.push(setValue);
+      }
+      if (skyValue != null) {
+        cols.push('sky_id');
+        placeholders.push('?');
+        values.push(skyValue);
+      }
+      if (cols.length > 1) {
+        await (db as any).$executeRawUnsafe(`INSERT INTO threejs_scenes (${cols.join(', ')}) VALUES (${placeholders.join(', ')})`, ...values as any);
+      }
+    }
+  }
+
   res.json({ ok: true });
 });
 
@@ -564,6 +621,77 @@ app.get("/tapestries/:id/sets", authGuard(["Admin", "Editor", "Viewer"]), async 
   }
 });
 
+// ThreeJS sky definitions for a tapestry
+app.get("/tapestries/:id/skies", authGuard(["Admin", "Editor", "Viewer"]), async (req, res) => {
+  const tapestryId = Number(req.params.id);
+  try {
+    const preferredKeys = ["label", "name", "sky_name", "title", "display_name", "description", "sky_description"];
+
+    const columns: any = await (db as any).$queryRawUnsafe(`SHOW COLUMNS FROM threejs_sky`);
+    const columnList = Array.isArray(columns) ? columns : [];
+    const columnNames = new Set(
+      columnList.map((col: any) => (col?.Field || col?.COLUMN_NAME || "").toString().toLowerCase())
+    );
+    const hasTapestryId = columnNames.has("tapestry_id");
+
+    let rows: any = [];
+    if (hasTapestryId) {
+      rows = await (db as any).$queryRawUnsafe(
+        `SELECT * FROM threejs_sky WHERE tapestry_id = ${tapestryId} ORDER BY sky_id ASC`
+      );
+    }
+    if (!Array.isArray(rows) || rows.length === 0) {
+      rows = await (db as any).$queryRawUnsafe(`SELECT * FROM threejs_sky ORDER BY sky_id ASC`);
+    }
+
+    const map = new Map<number, { id: number; label: string }>();
+    const rowsArray = Array.isArray(rows) ? rows : [];
+    const fallbackKeys = new Set([
+      "sky_id", "id", "tapestry_id", "created_at", "updated_at",
+      "createdAt", "updatedAt"
+    ]);
+
+    rowsArray.forEach((row: any) => {
+      const idRaw = row?.sky_id ?? row?.id;
+      const id = Number(idRaw);
+      if (!Number.isFinite(id) || id <= 0) return;
+
+      let label = "";
+      for (const key of preferredKeys) {
+        if (row && Object.prototype.hasOwnProperty.call(row, key)) {
+          const value = row[key];
+          if (value != null) {
+            const text = String(value).trim();
+            if (text) {
+              label = text;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!label) {
+        for (const [key, value] of Object.entries(row || {})) {
+          if (fallbackKeys.has(key)) continue;
+          if (value == null) continue;
+          const text = String(value).trim();
+          if (!text) continue;
+          if (/^[-+]?\d+(\.\d+)?$/.test(text)) continue;
+          label = text;
+          break;
+        }
+      }
+
+      if (!label) label = `Sky #${id}`;
+      map.set(id, { id, label });
+    });
+
+    res.json(Array.from(map.values()));
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || String(e) });
+  }
+});
+
 // Create ThreeJS Set
 app.post("/tapestries/:id/sets", authGuard(["Admin", "Editor"]), async (req, res) => {
   const tapestryId = Number(req.params.id);
@@ -630,8 +758,8 @@ app.get("/tapestries/:id/markers", authGuard(["Admin", "Editor", "Viewer"]), asy
     const rows = await (db as any).$queryRawUnsafe(
       `SELECT 
          tm.marker_id AS id,
-         tm.scene_id AS sceneId,
-         s.scene_sequence AS sceneSequence,
+         COALESCE(tm.scene_id, s2.scene_id, s3.scene_id) AS sceneId,
+         COALESCE(s.scene_sequence, s2.scene_sequence, s3.scene_sequence) AS sceneSequence,
          tm.overview_id AS overviewId,
          tm.marker_label AS markerLabel,
          tm.lat,
@@ -645,8 +773,15 @@ app.get("/tapestries/:id/markers", authGuard(["Admin", "Editor", "Viewer"]), asy
          tm.interactive_highlight_id AS interactiveHighlightId
        FROM threejs_tile_markers tm
        LEFT JOIN scenes s ON s.scene_id = tm.scene_id
-       WHERE (s.tapestry_id = ${tapestryId})
+       LEFT JOIN interactives i ON i.interactive_id = tm.interactive_id
+       LEFT JOIN scenes s2 ON s2.interactive_id = i.interactive_id
+       LEFT JOIN interactive_highlights ih ON ih.interactive_highlight_id = tm.interactive_highlight_id
+       LEFT JOIN interactives i2 ON i2.interactive_id = ih.interactive_id
+       LEFT JOIN scenes s3 ON s3.interactive_id = i2.interactive_id
+       WHERE (tm.scene_id IN (SELECT scene_id FROM scenes WHERE tapestry_id = ${tapestryId}))
           OR (tm.overview_id IN (SELECT t.overview_id FROM tapestry t WHERE t.tapestry_id = ${tapestryId} AND t.overview_id IS NOT NULL))
+          OR (tm.interactive_id IN (SELECT i3.interactive_id FROM interactives i3 JOIN scenes si ON si.interactive_id = i3.interactive_id WHERE si.tapestry_id = ${tapestryId}))
+          OR (tm.interactive_highlight_id IN (SELECT ih3.interactive_highlight_id FROM interactive_highlights ih3 JOIN interactives i4 ON i4.interactive_id = ih3.interactive_id JOIN scenes sj ON sj.interactive_id = i4.interactive_id WHERE sj.tapestry_id = ${tapestryId}))
        ORDER BY tm.marker_id ASC`
     );
     res.json(Array.isArray(rows) ? rows : []);
