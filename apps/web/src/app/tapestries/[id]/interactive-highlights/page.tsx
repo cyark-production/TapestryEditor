@@ -357,7 +357,7 @@ export default function InteractiveHighlightsPage() {
                             <label>Popup Audio Link</label>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                               <FileLink url={h.popupAudioLink} />
-                              <AudioPreview url={h.popupAudioLink} size={180} />
+                              <AudioPreview url={h.popupAudioLink} width={180} />
                             </div>
                             {canEdit && (<button className="legacy-icon-btn edit-btn" title="Edit audio link" onClick={() => setModal({ id: h.id, field: "popupAudioLink", label: "Popup Audio URL", value: h.popupAudioLink || "" })}><EditIcon /></button>)}
 
