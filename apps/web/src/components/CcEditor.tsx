@@ -63,6 +63,7 @@ export function CcEditor({ open, url, label, onClose, onSaved, direction }: {
   }
 
   const textDirection = direction || "ltr";
+  const styleDirection = textDirection === "auto" ? undefined : textDirection;
 
   if (!open) return null;
   return (
@@ -90,8 +91,8 @@ export function CcEditor({ open, url, label, onClose, onSaved, direction }: {
                 background: "var(--bg-secondary)",
                 color: "var(--text-primary)",
                 resize: "vertical",
-                direction: textDirection,
-                textAlign: textDirection === "rtl" ? "right" : "left"
+                direction: styleDirection,
+                textAlign: styleDirection === "rtl" ? "right" : "left"
               }}
             />
             {error && <div className="error" style={{ marginTop: 8 }}>{error}</div>}
