@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
+import { api, ensureSignedIn, resolveLanguageName, resolveLanguageMeta } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon } from "../../../../components/icons";
 import { FileLink } from "../../../../components/FileLink";
 import { VideoPreview } from "../../../../components/VideoPreview";
@@ -15,13 +15,14 @@ export default function VoiceClipsPage() {
   const [me, setMe] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ id: number; field: 'voiceBubbleText' | 'voiceVideo' | 'voiceVideoCc1' | 'voiceVideoCc2'; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ id: number; field: 'voiceBubbleText' | 'voiceVideo' | 'voiceVideoCc1' | 'voiceVideoCc2'; label: string; value: string; forceRtl?: boolean } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState<{ sceneId: string; voiceId: string; voiceBubbleText: string; voiceVideo: string; voiceVideoCc1: string; voiceVideoCc2: string }>({ sceneId: "", voiceId: "", voiceBubbleText: "", voiceVideo: "", voiceVideoCc1: "", voiceVideoCc2: "" });
   const [scenes, setScenes] = useState<any[]>([]);
   const [voices, setVoices] = useState<any[]>([]);
   const [lang1, setLang1] = useState<string>('English');
   const [lang2, setLang2] = useState<string | null>(null);
+  const [lang2IsRtl, setLang2IsRtl] = useState<boolean>(false);
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
 
   async function load() {
@@ -42,9 +43,11 @@ export default function VoiceClipsPage() {
       setVoices(Array.isArray(voicesRes.data) ? voicesRes.data : []);
       const a1 = (tapRes.data?.audioLanguage1 as string | undefined) || '';
       const a2 = (tapRes.data?.audioLanguage2 as string | undefined) || "";
-      const [l1, l2] = await Promise.all([resolveLanguageName(a1), resolveLanguageName(a2)]);
+      const [l1, meta2] = await Promise.all([resolveLanguageName(a1), resolveLanguageMeta(a2)]);
       setLang1((l1 && l1.trim()) || 'English');
-      setLang2(l2 && l2.trim() !== "" ? l2 : null);
+      const label2 = meta2?.label?.trim() ? meta2.label : null;
+      setLang2(label2);
+      setLang2IsRtl(!!meta2?.rtl);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -118,7 +121,13 @@ export default function VoiceClipsPage() {
                   <span className="legacy-clamp">{c.voiceBubbleTextAlt || ''}</span>
                   {canEdit && (
                     <span className="legacy-icon-group">
-                      <button className="legacy-icon-btn edit-btn" title={`Edit bubble (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: `Voice Bubble Text (${lang2})`, value: c.voiceBubbleTextAlt || '' })}><EditIcon /></button>
+                      <button
+                        className="legacy-icon-btn edit-btn"
+                        title={`Edit bubble (${lang2})`}
+                        onClick={() => setModal({ id: c.id, field: 'voiceBubbleText', label: `Voice Bubble Text (${lang2})`, value: c.voiceBubbleTextAlt || '', forceRtl: lang2IsRtl })}
+                      >
+                        <EditIcon />
+                      </button>
                     </span>
                   )}
                 </div>
@@ -126,12 +135,26 @@ export default function VoiceClipsPage() {
               <td className="legacy-td"></td>
               <td className="legacy-td">
                 <FileLink url={c.voiceVideoCc2} />
-                {canEdit && (
-                  <span className="legacy-icon-group" style={{ marginLeft: 6 }}>
-                    <button className="legacy-icon-btn edit-btn" title={`Edit CC URL (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Voice Video CC ${lang2}`, value: c.voiceVideoCc2 || '' })}><EditIcon /></button>
-                    {c.voiceVideoCc2 && (<button className="legacy-icon-btn" title={`Edit CC Text (${lang2})`} onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Edit Voice CC (${lang2})`, value: c.voiceVideoCc2 || '' })}>📝</button>)}
-                  </span>
-                )}
+                  {canEdit && (
+                    <span className="legacy-icon-group" style={{ marginLeft: 6 }}>
+                      <button
+                        className="legacy-icon-btn edit-btn"
+                        title={`Edit CC URL (${lang2})`}
+                        onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Voice Video CC ${lang2}`, value: c.voiceVideoCc2 || '', forceRtl: lang2IsRtl })}
+                      >
+                        <EditIcon />
+                      </button>
+                      {c.voiceVideoCc2 && (
+                        <button
+                          className="legacy-icon-btn"
+                          title={`Edit CC Text (${lang2})`}
+                          onClick={() => setModal({ id: c.id, field: 'voiceVideoCc2', label: `Edit Voice CC (${lang2})`, value: c.voiceVideoCc2 || '', forceRtl: lang2IsRtl })}
+                        >
+                          📝
+                        </button>
+                      )}
+                    </span>
+                  )}
               </td>
               <td className="legacy-td col-actions"></td>
             </tr>
@@ -205,14 +228,24 @@ export default function VoiceClipsPage() {
               <input value={addForm.voiceBubbleText} onChange={(e) => setAddForm({ ...addForm, voiceBubbleText: e.target.value })} />
               {lang2 && (<>
                 <label>{`Bubble Text (${lang2})`}</label>
-                <input value={(addForm as any).voiceBubbleTextAlt || ''} onChange={(e) => setAddForm({ ...(addForm as any), voiceBubbleTextAlt: e.target.value } as any)} />
+                <input
+                  dir={lang2IsRtl ? 'rtl' : undefined}
+                  style={{ ...(lang2IsRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                  value={(addForm as any).voiceBubbleTextAlt || ''}
+                  onChange={(e) => setAddForm({ ...(addForm as any), voiceBubbleTextAlt: e.target.value } as any)}
+                />
               </>)}
               <label>Video URL</label>
               <input value={addForm.voiceVideo} onChange={(e) => setAddForm({ ...addForm, voiceVideo: e.target.value })} />
               <label>Video CC 1</label>
               <input value={addForm.voiceVideoCc1} onChange={(e) => setAddForm({ ...addForm, voiceVideoCc1: e.target.value })} />
               <label>Video CC 2</label>
-              <input value={addForm.voiceVideoCc2} onChange={(e) => setAddForm({ ...addForm, voiceVideoCc2: e.target.value })} />
+              <input
+                dir={lang2IsRtl ? 'rtl' : undefined}
+                style={{ ...(lang2IsRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                value={addForm.voiceVideoCc2}
+                onChange={(e) => setAddForm({ ...addForm, voiceVideoCc2: e.target.value })}
+              />
             </div>
             <div className="modal-actions">
               <button className="btn" onClick={() => setAddOpen(false)}>Cancel</button>
@@ -239,12 +272,23 @@ export default function VoiceClipsPage() {
       )}
       {modal && (
         modal.label?.startsWith('Edit Voice CC') ? (
-          <CcEditor open={true} url={modal.value} label={modal.label} onClose={() => setModal(null)} />
+          <CcEditor
+            open={true}
+            url={modal.value}
+            label={modal.label}
+            direction={modal.forceRtl ? 'rtl' : undefined}
+            onClose={() => setModal(null)}
+          />
         ) : (
           <div className="modal-backdrop" onClick={() => setModal(null)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
+              <input
+                dir={modal.forceRtl ? 'rtl' : undefined}
+                style={{ width: '100%', ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                value={modal.value}
+                onChange={(e) => setModal({ ...modal, value: e.target.value })}
+              />
               <div className="modal-actions">
                 <button className="btn" onClick={() => setModal(null)}>Cancel</button>
                 <button className="btn btn-primary" onClick={async () => {

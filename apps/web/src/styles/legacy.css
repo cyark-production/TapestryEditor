@@ -132,6 +132,27 @@ body {
   height: 14px;
 }
 
+.legacy-expand-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  opacity: 1 !important;
+}
+
+.legacy-expand-btn:hover,
+.legacy-expand-btn.expanded {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(255, 92, 92, 0.12);
+  transform: scale(1.05);
+}
+
 .legacy-row-actions button { 
   margin-right: 8px; 
 }

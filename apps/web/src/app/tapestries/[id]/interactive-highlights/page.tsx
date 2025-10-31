@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
+import { api, ensureSignedIn, resolveLanguageMeta } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon, ToggleIcon } from "../../../../components/icons";
 import { FileLink } from "../../../../components/FileLink";
 import { AudioPreview } from "../../../../components/AudioPreview";
@@ -86,10 +86,11 @@ export default function InteractiveHighlightsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lang2, setLang2] = useState<string | null>(null);
+  const [lang2IsRtl, setLang2IsRtl] = useState<boolean>(false);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState<HighlightForm>(defaultForm);
-  const [modal, setModal] = useState<{ id: number; field: string; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ id: number; field: string; label: string; value: string; forceRtl?: boolean } | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ open: boolean; id?: number }>({ open: false });
 
@@ -119,8 +120,10 @@ export default function InteractiveHighlightsPage() {
       setItems(Array.isArray(highlightsRes.data) ? highlightsRes.data : []);
       setInteractives(Array.isArray(interactivesRes.data) ? interactivesRes.data : []);
       const langCode = (tapestryRes.data?.audioLanguage2 as string | undefined) || "";
-      const resolved = await resolveLanguageName(langCode);
-      setLang2(resolved && resolved.trim() !== "" ? resolved : null);
+      const meta = await resolveLanguageMeta(langCode);
+      const label = meta?.label?.trim() ? meta.label : null;
+      setLang2(label);
+      setLang2IsRtl(!!meta?.rtl);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -176,7 +179,7 @@ export default function InteractiveHighlightsPage() {
                   <tr>
                     <td className="legacy-td" style={{ textAlign: "center" }}>
                       <button
-                        className="legacy-icon-btn"
+                        className={`legacy-icon-btn legacy-expand-btn${isExpandedRow(h.id) ? " expanded" : ""}`}
                         title={isExpandedRow(h.id) ? "Collapse" : "Expand"}
                         onClick={() => toggleExpand(h.id)}
                       >
@@ -282,7 +285,13 @@ export default function InteractiveHighlightsPage() {
                           <span className="legacy-clamp">{h.popupTitleAltLang || <span className="legacy-muted">—</span>}</span>
                         </div>
                         {canEdit && (
-                          <button className="legacy-icon-btn edit-btn" title={`Edit popup title (${lang2})`} onClick={() => setModal({ id: h.id, field: "popupTitleAltLang", label: `Popup Title (${lang2})`, value: h.popupTitleAltLang || "" })}><EditIcon /></button>
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title={`Edit popup title (${lang2})`}
+                            onClick={() => setModal({ id: h.id, field: "popupTitleAltLang", label: `Popup Title (${lang2})`, value: h.popupTitleAltLang || "", forceRtl: lang2IsRtl })}
+                          >
+                            <EditIcon />
+                          </button>
                         )}
                       </td>
                       <td className="legacy-td" style={{ maxWidth: 260 }}>
@@ -291,7 +300,13 @@ export default function InteractiveHighlightsPage() {
                           <span className="legacy-clamp">{h.popupTextAltLang || <span className="legacy-muted">—</span>}</span>
                         </div>
                         {canEdit && (
-                          <button className="legacy-icon-btn edit-btn" title={`Edit popup text (${lang2})`} onClick={() => setModal({ id: h.id, field: "popupTextAltLang", label: `Popup Text (${lang2})`, value: h.popupTextAltLang || "" })}><EditIcon /></button>
+                          <button
+                            className="legacy-icon-btn edit-btn"
+                            title={`Edit popup text (${lang2})`}
+                            onClick={() => setModal({ id: h.id, field: "popupTextAltLang", label: `Popup Text (${lang2})`, value: h.popupTextAltLang || "", forceRtl: lang2IsRtl })}
+                          >
+                            <EditIcon />
+                          </button>
                         )}
                       </td>
                       <td className="legacy-td"></td>
@@ -333,7 +348,15 @@ export default function InteractiveHighlightsPage() {
                               <>
                                 <label>{`Popup Text (${lang2})`}</label>
                                 <div style={{ whiteSpace: "pre-wrap" }}>{h.popupTextAltLang || <span className="legacy-muted">—</span>}</div>
-                                {canEdit && (<button className="legacy-icon-btn edit-btn" title={`Edit popup text (${lang2})`} onClick={() => setModal({ id: h.id, field: "popupTextAltLang", label: `Popup Text (${lang2})`, value: h.popupTextAltLang || "" })}><EditIcon /></button>)}
+                                {canEdit && (
+                                  <button
+                                    className="legacy-icon-btn edit-btn"
+                                    title={`Edit popup text (${lang2})`}
+                                    onClick={() => setModal({ id: h.id, field: "popupTextAltLang", label: `Popup Text (${lang2})`, value: h.popupTextAltLang || "", forceRtl: lang2IsRtl })}
+                                  >
+                                    <EditIcon />
+                                  </button>
+                                )}
                               </>
                             )}
 
@@ -442,7 +465,12 @@ export default function InteractiveHighlightsPage() {
                 {lang2 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <label>{`Popup Title (${lang2})`}</label>
-                    <input value={form.popupTitleAltLang} onChange={(e) => setForm({ ...form, popupTitleAltLang: e.target.value })} />
+                    <input
+                      dir={lang2IsRtl ? "rtl" : undefined}
+                      style={{ ...(lang2IsRtl ? { direction: "rtl", textAlign: "right" } : {}) }}
+                      value={form.popupTitleAltLang}
+                      onChange={(e) => setForm({ ...form, popupTitleAltLang: e.target.value })}
+                    />
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -457,7 +485,12 @@ export default function InteractiveHighlightsPage() {
                 {lang2 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <label>{`Popup Video CC 2 (${lang2})`}</label>
-                    <input value={form.popupVideoCc2} onChange={(e) => setForm({ ...form, popupVideoCc2: e.target.value })} />
+                    <input
+                      dir={lang2IsRtl ? "rtl" : undefined}
+                      style={{ ...(lang2IsRtl ? { direction: "rtl", textAlign: "right" } : {}) }}
+                      value={form.popupVideoCc2}
+                      onChange={(e) => setForm({ ...form, popupVideoCc2: e.target.value })}
+                    />
                   </div>
                 )}
 
@@ -486,7 +519,13 @@ export default function InteractiveHighlightsPage() {
                 {lang2 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6, gridColumn: "1 / -1" }}>
                     <label>{`Popup Text (${lang2})`}</label>
-                    <textarea rows={4} value={form.popupTextAltLang} onChange={(e) => setForm({ ...form, popupTextAltLang: e.target.value })} />
+                    <textarea
+                      rows={4}
+                      dir={lang2IsRtl ? "rtl" : undefined}
+                      style={{ ...(lang2IsRtl ? { direction: "rtl", textAlign: "right" } : {}) }}
+                      value={form.popupTextAltLang}
+                      onChange={(e) => setForm({ ...form, popupTextAltLang: e.target.value })}
+                    />
                   </div>
                 )}
 
@@ -574,7 +613,13 @@ export default function InteractiveHighlightsPage() {
       )}
 
       {modal && modal.label?.startsWith("Edit Popup CC") ? (
-        <CcEditor open={true} url={modal.value} label={modal.label} onClose={() => setModal(null)} />
+        <CcEditor
+          open={true}
+          url={modal.value}
+          label={modal.label}
+          direction={modal.forceRtl ? "rtl" : undefined}
+          onClose={() => setModal(null)}
+        />
       ) : null}
 
       {modal && !modal.label?.startsWith("Edit Popup CC") && (
@@ -594,15 +639,17 @@ export default function InteractiveHighlightsPage() {
               <textarea
                 rows={6}
                 value={modal.value}
+                dir={modal.forceRtl ? "rtl" : undefined}
                 onChange={(e) => {
                   setModal({ ...modal, value: e.target.value });
                   setModalError(null);
                 }}
-                style={{ width: "100%" }}
+                style={{ width: "100%", ...(modal.forceRtl ? { direction: "rtl", textAlign: "right" } : {}) }}
               />
             ) : (
               <input
-                style={{ width: "100%" }}
+                dir={modal.forceRtl ? "rtl" : undefined}
+                style={{ width: "100%", ...(modal.forceRtl ? { direction: "rtl", textAlign: "right" } : {}) }}
                 value={modal.value}
                 onChange={(e) => {
                   setModal({ ...modal, value: e.target.value });

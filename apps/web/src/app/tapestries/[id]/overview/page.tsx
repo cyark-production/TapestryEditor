@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
+import { api, ensureSignedIn, resolveLanguageMeta } from "../../../../lib/api";
 import { FileLink } from "../../../../components/FileLink";
 import { AudioPreview } from "../../../../components/AudioPreview";
 import { CcEditor } from "../../../../components/CcEditor";
@@ -34,8 +34,9 @@ export default function OverviewPage() {
   const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ field: keyof Overview; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ field: keyof Overview; label: string; value: string; forceRtl?: boolean } | null>(null);
   const [lang2, setLang2] = useState<string | null>(null);
+  const [lang2IsRtl, setLang2IsRtl] = useState<boolean>(false);
   const [me, setMe] = useState<any | null>(null);
 
   async function load() {
@@ -52,8 +53,10 @@ export default function OverviewPage() {
       setMe(meRes.data || null);
       setData(o.data as Overview);
       const a2 = (t.data?.audioLanguage2 as string | undefined) || "";
-      const l2 = await resolveLanguageName(a2);
-      setLang2(l2 && l2.trim() !== '' ? l2 : null);
+      const meta = await resolveLanguageMeta(a2);
+      const label = meta?.label?.trim() ? meta.label : null;
+      setLang2(label);
+      setLang2IsRtl(!!meta?.rtl);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -99,7 +102,14 @@ export default function OverviewPage() {
                 <label>{`Title (${lang2})`}</label>
                 <div>{data.title_alt_lang || <span className="legacy-muted">—</span>}</div>
                 <div className="action-group">
-                  {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'title_alt_lang', label: `Title (${lang2})`, value: data.title_alt_lang || '' })}>✎</button>)}
+                  {canEdit && (
+                    <button
+                      className="legacy-icon-btn"
+                      onClick={() => setModal({ field: 'title_alt_lang', label: `Title (${lang2})`, value: data.title_alt_lang || '', forceRtl: lang2IsRtl })}
+                    >
+                      ✎
+                    </button>
+                  )}
                 </div>
               </>)}
 
@@ -112,7 +122,14 @@ export default function OverviewPage() {
                 <label>{`Description (${lang2})`}</label>
                 <div>{data.description_alt_lang || <span className="legacy-muted">—</span>}</div>
                 <div className="action-group">
-                  {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'description_alt_lang', label: `Description (${lang2})`, value: data.description_alt_lang || '' })}>✎</button>)}
+                  {canEdit && (
+                    <button
+                      className="legacy-icon-btn"
+                      onClick={() => setModal({ field: 'description_alt_lang', label: `Description (${lang2})`, value: data.description_alt_lang || '', forceRtl: lang2IsRtl })}
+                    >
+                      ✎
+                    </button>
+                  )}
                 </div>
               </>)}
             </div>
@@ -148,7 +165,14 @@ export default function OverviewPage() {
                   )}
                 </div>
                 <div className="action-group">
-                  {canEdit && (<button className="legacy-icon-btn" onClick={() => setModal({ field: 'audio_narration_2', label: `Audio Narration 2 (${lang2}) URL`, value: data.audio_narration_2 || '' })}>✎</button>)}
+                  {canEdit && (
+                    <button
+                      className="legacy-icon-btn"
+                      onClick={() => setModal({ field: 'audio_narration_2', label: `Audio Narration 2 (${lang2}) URL`, value: data.audio_narration_2 || '', forceRtl: lang2IsRtl })}
+                    >
+                      ✎
+                    </button>
+                  )}
                 </div>
               </>)}
 
@@ -168,8 +192,21 @@ export default function OverviewPage() {
                 <div className="action-group">
                   {canEdit && (
                     <span className="legacy-icon-group">
-                      <button className="legacy-icon-btn" onClick={() => setModal({ field: 'narration_cc_2', label: `Narration CC 2 (${lang2}) URL`, value: data.narration_cc_2 || '' })}>✎</button>
-                      {data.narration_cc_2 && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'narration_cc_2', label: `Edit Narration CC 2 (${lang2})`, value: data.narration_cc_2 || '' })}>📝</button>)}
+                      <button
+                        className="legacy-icon-btn"
+                        onClick={() => setModal({ field: 'narration_cc_2', label: `Narration CC 2 (${lang2}) URL`, value: data.narration_cc_2 || '', forceRtl: lang2IsRtl })}
+                      >
+                        ✎
+                      </button>
+                      {data.narration_cc_2 && (
+                        <button
+                          className="legacy-icon-btn"
+                          title="Edit CC text"
+                          onClick={() => setModal({ field: 'narration_cc_2', label: `Edit Narration CC 2 (${lang2})`, value: data.narration_cc_2 || '', forceRtl: lang2IsRtl })}
+                        >
+                          📝
+                        </button>
+                      )}
                     </span>
                   )}
                 </div>
@@ -245,12 +282,23 @@ export default function OverviewPage() {
 
       {modal && (
         modal.label?.startsWith('Edit Narration CC') ? (
-          <CcEditor open={true} url={modal.value} label={modal.label} onClose={() => setModal(null)} />
+          <CcEditor
+            open={true}
+            url={modal.value}
+            label={modal.label}
+            direction={modal.forceRtl ? 'rtl' : undefined}
+            onClose={() => setModal(null)}
+          />
         ) : (
           <div className="modal-backdrop" onClick={() => setModal(null)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
+              <input
+                dir={modal.forceRtl ? 'rtl' : undefined}
+                style={{ width: '100%', ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                value={modal.value}
+                onChange={(e) => setModal({ ...modal, value: e.target.value })}
+              />
               <div className="modal-actions">
                 <button className="btn" onClick={() => setModal(null)}>Cancel</button>
                 <button className="btn btn-primary" onClick={saveField}>Save</button>

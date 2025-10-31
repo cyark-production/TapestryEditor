@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
+import { api, ensureSignedIn, resolveLanguageMeta } from "../../../../lib/api";
 import { AddIcon, EditIcon, TrashIcon, ToggleIcon } from "../../../../components/icons";
 import { FileLink } from "../../../../components/FileLink";
 import { AudioPreview } from "../../../../components/AudioPreview";
@@ -18,10 +18,11 @@ export default function TapestryScenesTab() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ sequence: "", title: "" });
   const [addOpen, setAddOpen] = useState(false);
-  const [modal, setModal] = useState<{ id: number; field: 'sequence' | 'title' | 'description' | 'titleAltLang' | 'descriptionAltLang' | 'setId' | 'skyId'; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ id: number; field: 'sequence' | 'title' | 'description' | 'titleAltLang' | 'descriptionAltLang' | 'setId' | 'skyId'; label: string; value: string; forceRtl?: boolean } | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const formErrors = useMemo(() => ({ sequence: validateSeq(form.sequence) }), [form.sequence]);
   const [lang2, setLang2] = useState<string | null>(null);
+  const [lang2IsRtl, setLang2IsRtl] = useState<boolean>(false);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [isThreeJs, setIsThreeJs] = useState(false);
   const [setLookup, setSetLookup] = useState<Record<string, any>>({});
@@ -90,8 +91,10 @@ export default function TapestryScenesTab() {
         setSkyLookup({});
       }
       const a2 = (res.data?.audioLanguage2 as string | undefined) || "";
-      const l2 = await resolveLanguageName(a2);
-      setLang2(l2 && l2.trim() !== "" ? l2 : null);
+      const meta = await resolveLanguageMeta(a2);
+      const label = meta?.label?.trim() ? meta.label : null;
+      setLang2(label);
+      setLang2IsRtl(!!meta?.rtl);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -144,7 +147,11 @@ export default function TapestryScenesTab() {
                 <>
                   <tr key={s.id}>
                     <td className="legacy-td" style={{ textAlign: 'center' }}>
-                      <button className="legacy-icon-btn" title={isExpanded(s.id) ? 'Collapse' : 'Expand'} onClick={() => toggleExpand(s.id)}>
+                      <button
+                        className={`legacy-icon-btn legacy-expand-btn${isExpanded(s.id) ? ' expanded' : ''}`}
+                        title={isExpanded(s.id) ? 'Collapse' : 'Expand'}
+                        onClick={() => toggleExpand(s.id)}
+                      >
                         {isExpanded(s.id) ? '▾' : '▸'}
                       </button>
                     </td>
@@ -255,7 +262,13 @@ export default function TapestryScenesTab() {
                           {canEdit && (
                             <span className="legacy-icon-group">
                               <AudioPreview url={(s as any).audioNarration2} />
-                              <button className="legacy-icon-btn edit-btn" title="Edit audio narration 2" onClick={() => setModal({ id: s.id, field: 'audioNarration2' as any, label: 'Audio Narration 2', value: (s as any).audioNarration2 || '' })}><EditIcon /></button>
+                              <button
+                                className="legacy-icon-btn edit-btn"
+                                title="Edit audio narration 2"
+                                onClick={() => setModal({ id: s.id, field: 'audioNarration2' as any, label: 'Audio Narration 2', value: (s as any).audioNarration2 || '', forceRtl: lang2IsRtl })}
+                              >
+                                <EditIcon />
+                              </button>
                             </span>
                           )}
                           {!canEdit && <AudioPreview url={(s as any).audioNarration2} />}
@@ -275,8 +288,22 @@ export default function TapestryScenesTab() {
                           <span>CC 2:</span> <FileLink url={(s as any).narrationCc2} />
                           {canEdit && (
                             <span className="legacy-icon-group">
-                              <button className="legacy-icon-btn edit-btn" title="Edit CC 2 URL" onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Narration CC 2', value: (s as any).narrationCc2 || '' })}><EditIcon /></button>
-                              {(s as any).narrationCc2 && (<button className="legacy-icon-btn" title="Edit CC 2 Text" onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Edit Scene CC 2', value: (s as any).narrationCc2 || '' })}>📝</button>)}
+                              <button
+                                className="legacy-icon-btn edit-btn"
+                                title="Edit CC 2 URL"
+                                onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Narration CC 2', value: (s as any).narrationCc2 || '', forceRtl: lang2IsRtl })}
+                              >
+                                <EditIcon />
+                              </button>
+                              {(s as any).narrationCc2 && (
+                                <button
+                                  className="legacy-icon-btn"
+                                  title="Edit CC 2 Text"
+                                  onClick={() => setModal({ id: s.id, field: 'narrationCc2' as any, label: 'Edit Scene CC 2', value: (s as any).narrationCc2 || '', forceRtl: lang2IsRtl })}
+                                >
+                                  📝
+                                </button>
+                              )}
                             </span>
                           )}
                         </div>
@@ -368,7 +395,7 @@ export default function TapestryScenesTab() {
                         <button
                           className="legacy-icon-btn edit-btn"
                           title={`Edit Title (${lang2})`}
-                          onClick={() => setModal({ id: s.id, field: 'titleAltLang', label: `Title (${lang2})`, value: s.titleAltLang || '' })}
+                          onClick={() => setModal({ id: s.id, field: 'titleAltLang', label: `Title (${lang2})`, value: s.titleAltLang || '', forceRtl: lang2IsRtl })}
                         >
                           <EditIcon />
                         </button>
@@ -383,7 +410,7 @@ export default function TapestryScenesTab() {
                         <button
                           className="legacy-icon-btn edit-btn"
                           title={`Edit Description (${lang2})`}
-                          onClick={() => setModal({ id: s.id, field: 'descriptionAltLang', label: `Description (${lang2})`, value: s.descriptionAltLang || '' })}
+                          onClick={() => setModal({ id: s.id, field: 'descriptionAltLang', label: `Description (${lang2})`, value: s.descriptionAltLang || '', forceRtl: lang2IsRtl })}
                         >
                           <EditIcon />
                         </button>
@@ -411,11 +438,21 @@ export default function TapestryScenesTab() {
               {lang2 && (
                 <>
                   <label>{`Title (${lang2})`}</label>
-                  <input value={form.titleAltLang || ''} onChange={(e) => setForm({ ...form, titleAltLang: e.target.value })} />
+                  <input
+                    dir={lang2IsRtl ? 'rtl' : undefined}
+                    style={{ ...(lang2IsRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                    value={form.titleAltLang || ''}
+                    onChange={(e) => setForm({ ...form, titleAltLang: e.target.value })}
+                  />
                   <label>Description</label>
                   <input value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                   <label>{`Description (${lang2})`}</label>
-                  <input value={form.descriptionAltLang || ''} onChange={(e) => setForm({ ...form, descriptionAltLang: e.target.value })} />
+                  <input
+                    dir={lang2IsRtl ? 'rtl' : undefined}
+                    style={{ ...(lang2IsRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                    value={form.descriptionAltLang || ''}
+                    onChange={(e) => setForm({ ...form, descriptionAltLang: e.target.value })}
+                  />
                 </>
               )}
             </div>
@@ -448,7 +485,13 @@ export default function TapestryScenesTab() {
       )}
       {modal && (
         modal.label?.startsWith('Edit Scene CC') ? (
-          <CcEditor open={true} url={modal.value} label={modal.label} onClose={() => setModal(null)} />
+          <CcEditor
+            open={true}
+            url={modal.value}
+            label={modal.label}
+            direction={modal.forceRtl ? 'rtl' : undefined}
+            onClose={() => setModal(null)}
+          />
         ) : (
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -485,8 +528,21 @@ export default function TapestryScenesTab() {
                       );
                     })}
               </select>
+            ) : modal.field === 'description' || modal.field === 'descriptionAltLang' ? (
+              <textarea
+                rows={6}
+                dir={modal.forceRtl ? 'rtl' : undefined}
+                style={{ width: '100%', ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}), minHeight: 160, resize: 'vertical' }}
+                value={modal.value}
+                onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }}
+              />
             ) : (
-              <input style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+              <input
+                dir={modal.forceRtl ? 'rtl' : undefined}
+                style={{ width: '100%', ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                value={modal.value}
+                onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }}
+              />
             )}
             {modalError && <div style={{ color: 'crimson', marginTop: 8 }}>{modalError}</div>}
             <div className="modal-actions">

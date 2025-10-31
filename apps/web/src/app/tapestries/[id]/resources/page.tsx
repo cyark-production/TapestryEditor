@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ensureSignedIn, resolveLanguageName } from "../../../../lib/api";
+import { api, ensureSignedIn, resolveLanguageMeta } from "../../../../lib/api";
 
 type Resources = {
   resources_id: number;
@@ -17,8 +17,9 @@ export default function ResourcesPage() {
   const [data, setData] = useState<Resources | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ field: keyof Resources; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ field: keyof Resources; label: string; value: string; forceRtl?: boolean } | null>(null);
   const [lang2, setLang2] = useState<string | null>(null);
+  const [lang2IsRtl, setLang2IsRtl] = useState<boolean>(false);
   const [me, setMe] = useState<any | null>(null);
 
   async function load() {
@@ -35,8 +36,10 @@ export default function ResourcesPage() {
       setMe(meRes.data || null);
       setData(res.data);
       const a2 = (tap.data?.audioLanguage2 as string | undefined) || "";
-      const l2 = await resolveLanguageName(a2);
-      setLang2(l2 && l2.trim() !== '' ? l2 : null);
+      const meta = await resolveLanguageMeta(a2);
+      const label = meta?.label?.trim() ? meta.label : null;
+      setLang2(label);
+      setLang2IsRtl(!!meta?.rtl);
     } catch (e: any) {
       const status = e?.response?.status;
       const message = e?.response?.data || e?.message || "Unknown error";
@@ -82,7 +85,15 @@ export default function ResourcesPage() {
                 <label>{`About Description (${lang2})`}</label>
                 <div>{data.about_description_alt_lang || <span className="legacy-muted">—</span>}</div>
                 <div className="action-group">
-                  {canEdit && (<button className="legacy-icon-btn" title="Edit" onClick={() => setModal({ field: 'about_description_alt_lang', label: `About Description (${lang2})`, value: data.about_description_alt_lang || '' })}>✎</button>)}
+                  {canEdit && (
+                    <button
+                      className="legacy-icon-btn"
+                      title="Edit"
+                      onClick={() => setModal({ field: 'about_description_alt_lang', label: `About Description (${lang2})`, value: data.about_description_alt_lang || '', forceRtl: lang2IsRtl })}
+                    >
+                      ✎
+                    </button>
+                  )}
                 </div>
               </>)}
             </div>
@@ -100,7 +111,15 @@ export default function ResourcesPage() {
                 <label>{`Credits (${lang2})`}</label>
                 <div>{data.credits_alt_lang || <span className="legacy-muted">—</span>}</div>
                 <div className="action-group">
-                  {canEdit && (<button className="legacy-icon-btn" title="Edit" onClick={() => setModal({ field: 'credits_alt_lang', label: `Credits (${lang2})`, value: data.credits_alt_lang || '' })}>✎</button>)}
+                  {canEdit && (
+                    <button
+                      className="legacy-icon-btn"
+                      title="Edit"
+                      onClick={() => setModal({ field: 'credits_alt_lang', label: `Credits (${lang2})`, value: data.credits_alt_lang || '', forceRtl: lang2IsRtl })}
+                    >
+                      ✎
+                    </button>
+                  )}
                 </div>
               </>)}
             </div>
@@ -114,7 +133,12 @@ export default function ResourcesPage() {
         <div className="modal-backdrop" onClick={() => setModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
-            <textarea style={{ width: '100%', minHeight: 140 }} value={modal.value} onChange={(e) => setModal({ ...modal, value: e.target.value })} />
+            <textarea
+              dir={modal.forceRtl ? 'rtl' : undefined}
+              style={{ width: '100%', minHeight: 140, ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+              value={modal.value}
+              onChange={(e) => setModal({ ...modal, value: e.target.value })}
+            />
             <div className="modal-actions">
               <button className="btn" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={saveField}>Save</button>

@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { api, ensureSignedIn } from "../lib/api";
 import { toOriginBlobUrl } from "../lib/blob";
 
-export function CcEditor({ open, url, label, onClose, onSaved }: {
+export function CcEditor({ open, url, label, onClose, onSaved, direction }: {
   open: boolean;
   url: string;
   label?: string;
   onClose: () => void;
   onSaved?: () => void;
+  direction?: "ltr" | "rtl" | "auto";
 }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -61,6 +62,8 @@ export function CcEditor({ open, url, label, onClose, onSaved }: {
     }
   }
 
+  const textDirection = direction || "ltr";
+
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -73,6 +76,8 @@ export function CcEditor({ open, url, label, onClose, onSaved }: {
             <textarea
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              dir={textDirection}
+              spellCheck={false}
               style={{
                 width: "100%",
                 minHeight: 320,
@@ -84,7 +89,9 @@ export function CcEditor({ open, url, label, onClose, onSaved }: {
                 borderRadius: 8,
                 background: "var(--bg-secondary)",
                 color: "var(--text-primary)",
-                resize: "vertical"
+                resize: "vertical",
+                direction: textDirection,
+                textAlign: textDirection === "rtl" ? "right" : "left"
               }}
             />
             {error && <div className="error" style={{ marginTop: 8 }}>{error}</div>}

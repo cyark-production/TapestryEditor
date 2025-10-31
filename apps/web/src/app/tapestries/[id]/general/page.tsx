@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { api, ensureSignedIn, resolveLanguageName, getLanguageNames } from "../../../../lib/api";
+import { api, ensureSignedIn, resolveLanguageMeta, getLanguageNames } from "../../../../lib/api";
 import { FileLink } from "../../../../components/FileLink";
 import { AudioPreview } from "../../../../components/AudioPreview";
 import { CcEditor } from "../../../../components/CcEditor";
@@ -42,7 +42,7 @@ export default function GeneralInfoPage() {
   const [item, setItem] = useState<Tapestry | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ field: keyof Tapestry | null; label: string; value: string } | null>(null);
+  const [modal, setModal] = useState<{ field: keyof Tapestry | null; label: string; value: string; forceRtl?: boolean } | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [me, setMe] = useState<any | null>(null);
   const [langMap, setLangMap] = useState<Record<string,string>>({});
@@ -187,9 +187,19 @@ export default function GeneralInfoPage() {
     } as any;
   }
 
+  const secondaryLanguageFields = new Set<keyof Tapestry>([
+    "titleAltLang",
+    "locationAltLang",
+    "taglineAltLang",
+    "ambientAudioAlt",
+    "ambientAudioCc1Alt",
+    "ambientAudioCc2Alt",
+  ]);
+
   function openFieldEditor(field: keyof Tapestry, label: string, current?: string | null) {
     setModalError(null);
-    setModal({ field, label, value: current || "" });
+    const forceRtl = secondaryLanguageFields.has(field) && lang2IsRtl;
+    setModal({ field, label, value: current || "", forceRtl });
   }
   async function saveField() {
     if (!modal?.field) return;
@@ -228,17 +238,33 @@ export default function GeneralInfoPage() {
 
   const hasSecondLang = !!(form.audioLanguage2 && form.audioLanguage2.trim() !== "");
   const [lang2, setLang2] = useState<string>("Alt");
+  const [lang2IsRtl, setLang2IsRtl] = useState<boolean>(false);
   useEffect(() => {
     (async () => {
-      const l2 = await resolveLanguageName(form.audioLanguage2);
-      setLang2(l2 || "Alt");
+      const meta = await resolveLanguageMeta(form.audioLanguage2);
+      setLang2(meta?.label || "Alt");
+      setLang2IsRtl(!!meta?.rtl);
     })();
   }, [form.audioLanguage2]);
   const canEdit = (me?.roles || []).some((r: string) => r === 'Admin' || r === 'Editor');
+  const viewerUrl = form.prettyId ? `https://tapestry.cyark.org/content/${form.prettyId}` : null;
 
   return (
     <main style={{ padding: 24 }}>
-      <h2>General Info</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+        <h2 style={{ margin: 0 }}>General Info</h2>
+        <button
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, paddingInline: 16, whiteSpace: 'nowrap' }}
+          disabled={!viewerUrl}
+          onClick={() => {
+            if (viewerUrl) window.open(viewerUrl, '_blank', 'noopener,noreferrer');
+          }}
+        >
+          <span style={{ fontSize: 16 }}>↗</span>
+          <span>Open in Tapestry</span>
+        </button>
+      </div>
       {loading && <p className="loading">Loading…</p>}
       {error && <div className="error">{error}</div>}
       {item && (
@@ -446,7 +472,15 @@ export default function GeneralInfoPage() {
                     {canEdit && (
                       <span className="legacy-icon-group">
                         <button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc1Alt',`Ambient Audio CC 1 (${lang2})`, form.ambientAudioCc1Alt)} title="Edit">✎</button>
-                        {form.ambientAudioCc1Alt && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc1Alt', label: `Edit Ambient Audio CC 1 (${lang2})`, value: form.ambientAudioCc1Alt! })}>📝</button>)}
+                        {form.ambientAudioCc1Alt && (
+                          <button
+                            className="legacy-icon-btn"
+                            title="Edit CC text"
+                            onClick={() => setModal({ field: 'ambientAudioCc1Alt', label: `Edit Ambient Audio CC 1 (${lang2})`, value: form.ambientAudioCc1Alt!, forceRtl: lang2IsRtl })}
+                          >
+                            📝
+                          </button>
+                        )}
                       </span>
                     )}
                   </div>
@@ -471,7 +505,15 @@ export default function GeneralInfoPage() {
                     {canEdit && (
                       <span className="legacy-icon-group">
                         <button className="legacy-icon-btn" onClick={() => openFieldEditor('ambientAudioCc2Alt',`Ambient Audio CC 2 (${lang2})`, form.ambientAudioCc2Alt)} title="Edit">✎</button>
-                        {form.ambientAudioCc2Alt && (<button className="legacy-icon-btn" title="Edit CC text" onClick={() => setModal({ field: 'ambientAudioCc2Alt', label: `Edit Ambient Audio CC 2 (${lang2})`, value: form.ambientAudioCc2Alt! })}>📝</button>)}
+                        {form.ambientAudioCc2Alt && (
+                          <button
+                            className="legacy-icon-btn"
+                            title="Edit CC text"
+                            onClick={() => setModal({ field: 'ambientAudioCc2Alt', label: `Edit Ambient Audio CC 2 (${lang2})`, value: form.ambientAudioCc2Alt!, forceRtl: lang2IsRtl })}
+                          >
+                            📝
+                          </button>
+                        )}
                       </span>
                     )}
                   </div>
@@ -483,15 +525,32 @@ export default function GeneralInfoPage() {
       )}
       {modal && (
         modal.label?.startsWith('Edit Ambient Audio CC') ? (
-          <CcEditor open={true} url={modal.value} label={modal.label} onClose={() => setModal(null)} />
+          <CcEditor
+            open={true}
+            url={modal.value}
+            label={modal.label}
+            direction={modal.forceRtl ? 'rtl' : undefined}
+            onClose={() => setModal(null)}
+          />
         ) : (
           <div className="modal-backdrop" onClick={() => setModal(null)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
               <h3 style={{ marginTop: 0 }}>{modal.label}</h3>
               {modal.field === 'launchDate' ? (
-                <input type="date" style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+                <input
+                  type="date"
+                  dir={modal.forceRtl ? 'rtl' : undefined}
+                  style={{ width: '100%', ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                  value={modal.value}
+                  onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }}
+                />
               ) : (
-                <input style={{ width: '100%' }} value={modal.value} onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }} />
+                <input
+                  dir={modal.forceRtl ? 'rtl' : undefined}
+                  style={{ width: '100%', ...(modal.forceRtl ? { direction: 'rtl', textAlign: 'right' } : {}) }}
+                  value={modal.value}
+                  onChange={(e) => { setModal({ ...modal, value: e.target.value }); setModalError(null); }}
+                />
               )}
               {modalError && <div style={{ color: 'crimson', marginTop: 8 }}>{modalError}</div>}
               <div className="modal-actions">

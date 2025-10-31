@@ -263,7 +263,7 @@ app.get("/tapestries", authGuard(["Admin", "Editor", "Viewer"]), async (_req, re
     res.json(withFlag);
   } catch {
     // If the legacy tables are missing, still return items without flag
-    res.json(items);
+  res.json(items);
   }
 });
 

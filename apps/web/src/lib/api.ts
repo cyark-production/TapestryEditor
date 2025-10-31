@@ -64,31 +64,63 @@ export function setSelectedTapestryId(id: number | null) {
 }
 
 // Language name resolver (code -> english name), cached client-side
+type LanguageMeta = { label: string; rtl: boolean };
+
 let languageCache: Record<string, string> | null = null;
-export async function getLanguageNames(): Promise<Record<string, string>> {
-  if (languageCache) return languageCache;
+let languageMetaCache: Record<string, LanguageMeta> | null = null;
+
+async function ensureLanguageCaches(): Promise<void> {
+  if (languageCache && languageMetaCache) return;
   try {
     await ensureSignedIn();
+  } catch {
+    // ignore sign-in errors here; request may still work for cached tokens
+  }
+  try {
     const res = await api.get('/languages');
     const map: Record<string, string> = {};
+    const meta: Record<string, LanguageMeta> = {};
     for (const row of res.data || []) {
       if (!row?.code) continue;
       const code = String(row.code).trim();
+      if (!code) continue;
       const englishName = (row?.englishName || row?.name || "").toString().trim();
       const label = englishName || code;
+      const rtlSource = row?.right_to_left ?? row?.rightToLeft ?? row?.rtl ?? row?.isRTL ?? row?.is_rtl;
+      const rtl = typeof rtlSource === "string"
+        ? rtlSource === "1" || rtlSource.toLowerCase() === "true"
+        : Boolean(rtlSource);
       map[code] = label;
+      meta[code] = { label, rtl };
     }
     languageCache = map;
-    return map;
+    languageMetaCache = meta;
   } catch {
-    return {};
+    if (!languageCache) languageCache = {};
+    if (!languageMetaCache) languageMetaCache = {};
   }
+}
+
+export async function getLanguageNames(): Promise<Record<string, string>> {
+  await ensureLanguageCaches();
+  return languageCache || {};
 }
 
 export async function resolveLanguageName(code?: string | null): Promise<string | null> {
   if (!code) return null;
-  const map = await getLanguageNames();
-  return map[code.trim()] || code;
+  await ensureLanguageCaches();
+  return languageCache?.[code.trim()] || code;
+}
+
+export async function resolveLanguageMeta(code?: string | null): Promise<LanguageMeta | null> {
+  if (!code) return null;
+  await ensureLanguageCaches();
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+  const meta = languageMetaCache?.[trimmed];
+  if (meta) return meta;
+  const label = languageCache?.[trimmed] || trimmed;
+  return { label, rtl: false };
 }
 
 
